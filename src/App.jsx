@@ -19,8 +19,12 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownRight,
-  Pencil
+  Pencil,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
+
+const apiKey = "";
 
 // 1. Khởi tạo Supabase an toàn (Xử lý fallback cho môi trường preview)
 const getEnv = (key) => {
@@ -103,6 +107,8 @@ const App = () => {
   const [modalMode, setModalMode] = useState('transaction'); 
   const [currentViewDate, setCurrentViewDate] = useState(new Date());
   const [editingId, setEditingId] = useState(null);
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const defaultFormData = {
     title: '',
@@ -260,6 +266,46 @@ const App = () => {
     return alerts;
   }, [stats, plans]);
 
+  // Hàm gọi Gemini API phân tích chi tiêu
+  const fetchAIAdvice = async () => {
+    setIsAnalyzing(true);
+    const categoryDetails = Object.entries(stats.expenseByCategory)
+      .map(([k, v]) => `${k} (${formatVND(v)})`)
+      .join(', ');
+    
+    const prompt = `Bạn là một chuyên gia tài chính cá nhân nhiệt tình. Dựa vào dữ liệu thu chi tháng này của tôi: Tổng thu: ${formatVND(stats.income)}, Tổng chi: ${formatVND(stats.expense)}. Các khoản chi tiêu gồm: ${categoryDetails || 'Chưa có khoản chi nào'}. Hãy đưa ra nhận xét ngắn gọn (tối đa 4 câu) và 1 lời khuyên hữu ích để tiết kiệm hoặc tối ưu tài chính. Sử dụng emoji cho sinh động.`;
+
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      systemInstruction: { parts: [{ text: "Luôn trả về câu trả lời định dạng text rõ ràng, không dùng markdown in đậm quá mức." }] }
+    };
+
+    const callApi = async (attempt = 0) => {
+      const delays = [1000, 2000, 4000, 8000, 16000];
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Lỗi API');
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        setAiAdvice(text || "Không có phản hồi từ AI.");
+      } catch (error) {
+        if (attempt < delays.length) {
+          await new Promise(r => setTimeout(r, delays[attempt]));
+          await callApi(attempt + 1);
+        } else {
+          setAiAdvice("Đã xảy ra lỗi khi kết nối với AI. Vui lòng thử lại sau.");
+        }
+      }
+    };
+
+    await callApi();
+    setIsAnalyzing(false);
+  };
+
   // Các hàm tương tác Database
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -378,12 +424,16 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4 sm:p-8">
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap');
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        .font-logo {
+          font-family: 'Montserrat', sans-serif;
         }
       `}</style>
       
@@ -399,9 +449,16 @@ const App = () => {
           {/* Header */}
           <header className="pt-14 pb-6 px-6 bg-white rounded-b-[2.5rem] shadow-sm border-b border-slate-100">
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-slate-900">FINANCE</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tháng {currentViewDate.getMonth() + 1}, {currentViewDate.getFullYear()}</p>
+              <div className="flex flex-col gap-0.5">
+                <h1 className="text-3xl font-logo tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 drop-shadow-sm">
+                  FINANCE
+                </h1>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Calendar size={12} className="text-blue-500" />
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                    Tháng {currentViewDate.getMonth() + 1}, {currentViewDate.getFullYear()}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button 
@@ -448,14 +505,24 @@ const App = () => {
                   <SmallPieChart stats={stats} />
                 </section>
                 
-                <section className="bg-blue-600 p-6 rounded-[2rem] text-white">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Bell size={20} className="text-blue-200"/>
-                    <h3 className="font-bold">Mẹo tiết kiệm</h3>
+                <section className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <Sparkles size={20} className="text-yellow-300"/>
+                      <h3 className="font-bold">✨ Cố vấn AI</h3>
+                    </div>
+                    <button 
+                      onClick={fetchAIAdvice} 
+                      disabled={isAnalyzing} 
+                      className="bg-white/20 hover:bg-white/30 p-2 px-3 rounded-xl transition-colors text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                      {isAnalyzing ? 'Đang phân tích...' : 'Phân tích'}
+                    </button>
                   </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    Bạn đã chi {Math.round((stats.expense/(stats.income || 1))*100 || 0)}% thu nhập. Hãy cố gắng giữ mức chi dưới 70% để có quỹ dự phòng tốt nhé!
-                  </p>
+                  <div className="relative z-10 text-sm text-indigo-50 leading-relaxed bg-white/10 p-4 rounded-2xl backdrop-blur-sm border border-white/10 whitespace-pre-line">
+                    {aiAdvice ? aiAdvice : 'Bấm "Phân tích" để AI xem xét và đưa ra lời khuyên dựa trên chi tiêu tháng này của bạn.'}
+                  </div>
                 </section>
               </div>
             )}
@@ -480,9 +547,6 @@ const App = () => {
                         {t.type === 'income' ? '+' : '-'}{formatVND(t.amount).replace('₫','')}
                       </p>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEditModal(t, 'transaction')} className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                          <Pencil size={16}/>
-                        </button>
                         <button onClick={() => handleDeleteTransaction(t.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
                           <Trash2 size={16}/>
                         </button>
