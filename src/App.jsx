@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// Xóa import từ module
+// Xóa import từ module để tránh lỗi trong môi trường preview
 // import { createClient } from '@supabase/supabase-js';
 import { 
   Plus, 
-  Wallet, 
   TrendingUp, 
   TrendingDown, 
   Trash2, 
@@ -12,7 +11,6 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  PieChart as PieIcon,
   List,
   LayoutDashboard,
   X,
@@ -23,33 +21,81 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 
-// Hàm lấy biến môi trường an toàn dùng cho Vite
+// 1. Khởi tạo Supabase an toàn (Xử lý fallback cho môi trường preview)
 const getEnv = (key) => {
   try {
-    return import.meta.env[key];
+    return import.meta.env[key] || '';
   } catch (e) {
     return '';
   }
 };
 
-// Lấy thông tin Supabase (Bạn hãy điền trong file .env.local)
 const supabaseUrl = getEnv('VITE_SUPABASE_URL');
 const supabaseKey = getEnv('VITE_SUPABASE_ANON_KEY');
 
-// Khởi tạo Supabase client thông qua window.supabase nếu đã được load từ CDN
-const getSupabase = () => {
+// Hàm khởi tạo client từ window nếu load qua CDN
+const getSupabaseClient = () => {
   if (window.supabase && supabaseUrl && supabaseKey) {
     return window.supabase.createClient(supabaseUrl, supabaseKey);
   }
   return null;
 };
 
+// 2. Dữ liệu tĩnh (Đưa ra ngoài component để tối ưu)
+const categories = {
+  income: ['Lương', 'Thưởng', 'Kinh doanh', 'Khác'],
+  expense: ['Ăn uống', 'Di chuyển', 'Nhà cửa', 'Mua sắm', 'Giải trí', 'Học tập', 'Sức khỏe']
+};
+
+const categoryColors = {
+  'Ăn uống': '#f43f5e', 'Di chuyển': '#f59e0b', 'Nhà cửa': '#8b5cf6',
+  'Mua sắm': '#ec4899', 'Giải trí': '#06b6d4', 'Học tập': '#10b981',
+  'Sức khỏe': '#ef4444', 'Lương': '#10b981', 'Thưởng': '#3b82f6',
+  'Kinh doanh': '#f59e0b', 'Khác': '#64748b'
+};
+
+const formatVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
+
+// 3. Component Biểu đồ (Đưa ra ngoài để tránh lỗi Hook của React)
+const SmallPieChart = ({ stats }) => {
+  const data = Object.entries(stats.expenseByCategory);
+  if (data.length === 0) return <div className="py-10 text-center text-slate-400 text-sm italic">Chưa có dữ liệu chi tiêu</div>;
+  
+  let cumulative = 0;
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 200 200" className="w-48 h-48 -rotate-90 mb-6">
+        {data.map(([cat, val]) => {
+          const p = val / stats.expense;
+          const x1 = Math.cos(2 * Math.PI * cumulative);
+          const y1 = Math.sin(2 * Math.PI * cumulative);
+          cumulative += p;
+          const x2 = Math.cos(2 * Math.PI * cumulative);
+          const y2 = Math.sin(2 * Math.PI * cumulative);
+          return <path key={cat} d={`M ${100 + x1*80} ${100 + y1*80} A 80 80 0 ${p > 0.5 ? 1 : 0} 1 ${100 + x2*80} ${100 + y2*80} L 100 100`} fill={categoryColors[cat]} />;
+        })}
+        <circle cx="100" cy="100" r="50" fill="white" />
+      </svg>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full">
+        {data.map(([cat, val]) => (
+          <div key={cat} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5 truncate">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categoryColors[cat] }}></div>
+              <span className="text-slate-600 truncate">{cat}</span>
+            </div>
+            <span className="font-bold">{Math.round((val/stats.expense)*100)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- COMPONENT CHÍNH ---
 const App = () => {
-  // Thay vì dùng localStorage, ta khởi tạo state rỗng ban đầu
+  const [supabase, setSupabase] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [plans, setPlans] = useState([]);
-  const [supabase, setSupabase] = useState(null);
-
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
@@ -64,9 +110,9 @@ const App = () => {
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Load Supabase script dynamically
+  // Tải Supabase CDN động cho môi trường preview
   useEffect(() => {
-    const loadSupabase = async () => {
+    const loadSupabaseScript = async () => {
       if (!window.supabase) {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -74,28 +120,41 @@ const App = () => {
         document.body.appendChild(script);
         
         script.onload = () => {
-          setSupabase(getSupabase());
+          setSupabase(getSupabaseClient());
         };
       } else {
-        setSupabase(getSupabase());
+        setSupabase(getSupabaseClient());
       }
     };
     
-    loadSupabase();
+    loadSupabaseScript();
   }, []);
 
-  // TÍCH HỢP BƯỚC 3: Lấy dữ liệu khi tải ứng dụng
+  // Tải dữ liệu từ Supabase hoặc LocalStorage (fallback) khi mở app
   useEffect(() => {
-    if (supabase || (!supabaseUrl && !supabaseKey)) { // Nếu có supabase hoặc đang fallback local
+    if (supabase || (!supabaseUrl && !supabaseKey)) {
       fetchTransactions();
       fetchPlans();
     }
   }, [supabase]);
 
+  // Cập nhật LocalStorage khi có thay đổi (chỉ dùng khi không có Supabase)
+  useEffect(() => {
+    if (!supabase && transactions.length > 0) {
+      localStorage.setItem('money_manager_data_fallback_v2', JSON.stringify(transactions));
+    }
+  }, [transactions, supabase]);
+
+  useEffect(() => {
+    if (!supabase && plans.length > 0) {
+      localStorage.setItem('money_manager_plans_fallback_v2', JSON.stringify(plans));
+    }
+  }, [plans, supabase]);
+
+
   const fetchTransactions = async () => {
     if (!supabase) {
-      // Đọc từ localStorage nếu không có Supabase (fallback)
-      const saved = localStorage.getItem('money_manager_data_fallback');
+      const saved = localStorage.getItem('money_manager_data_fallback_v2');
       if (saved) setTransactions(JSON.parse(saved));
       return;
     }
@@ -108,8 +167,7 @@ const App = () => {
 
   const fetchPlans = async () => {
     if (!supabase) {
-      // Đọc từ localStorage nếu không có Supabase (fallback)
-      const saved = localStorage.getItem('money_manager_plans_fallback');
+      const saved = localStorage.getItem('money_manager_plans_fallback_v2');
       if (saved) setPlans(JSON.parse(saved));
       return;
     }
@@ -120,21 +178,7 @@ const App = () => {
     if (!error && data) setPlans(data);
   };
 
-  const categories = {
-    income: ['Lương', 'Thưởng', 'Kinh doanh', 'Khác'],
-    expense: ['Ăn uống', 'Di chuyển', 'Nhà cửa', 'Mua sắm', 'Giải trí', 'Học tập', 'Sức khỏe']
-  };
-
-  const categoryColors = {
-    'Ăn uống': '#f43f5e', 'Di chuyển': '#f59e0b', 'Nhà cửa': '#8b5cf6',
-    'Mua sắm': '#ec4899', 'Giải trí': '#06b6d4', 'Học tập': '#10b981',
-    'Sức khỏe': '#ef4444', 'Lương': '#10b981', 'Thưởng': '#3b82f6',
-    'Kinh doanh': '#f59e0b', 'Khác': '#64748b'
-  };
-
-  const formatVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
-
-  // Thống kê theo tháng được chọn
+  // Các hàm tính toán thống kê
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const tDate = new Date(t.date);
@@ -188,14 +232,13 @@ const App = () => {
     if (upcomingPlans.length > 0) {
       alerts.push(`Bạn có ${upcomingPlans.length} kế hoạch tài chính trong 3 ngày tới.`);
     }
-
     return alerts;
   }, [stats, plans]);
 
-  // TÍCH HỢP BƯỚC 3: Lưu dữ liệu vào Supabase
+  // Các hàm tương tác Database
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.amount) return;
+    if (!formData.title || !formData.amount || !supabase) return;
 
     const newData = {
       title: formData.title,
@@ -205,57 +248,37 @@ const App = () => {
       date: formData.date
   };
 
-  // Cập nhật localStorage cho fallback
-  useEffect(() => {
-    if (!supabase) {
-      localStorage.setItem('money_manager_data_fallback', JSON.stringify(transactions));
-    }
-  }, [transactions, supabase]);
-
-  useEffect(() => {
-    if (!supabase) {
-      localStorage.setItem('money_manager_plans_fallback', JSON.stringify(plans));
-    }
-  }, [plans, supabase]);
-
-
-    if (modalMode === 'transaction') {
-      if (supabase) {
-        const { data, error } = await supabase.from('transactions').insert([newData]).select();
-        if (!error && data) setTransactions([data[0], ...transactions]);
-      } else {
-        setTransactions([{ id: Date.now(), ...newData }, ...transactions]); // Fallback test local
-      }
+  if (modalMode === 'transaction') {
+    if (supabase) {
+      const { data, error } = await supabase.from('transactions').insert([newData]).select();
+      if (!error && data) setTransactions([data[0], ...transactions]);
     } else {
-      const planData = { ...newData, completed: false };
-      if (supabase) {
-        const { data, error } = await supabase.from('plans').insert([planData]).select();
-        if (!error && data) setPlans([data[0], ...plans]);
-      } else {
-        setPlans([{ id: Date.now(), ...planData }, ...plans]); // Fallback test local
-      }
+      setTransactions([{ id: Date.now(), ...newData }, ...transactions]);
     }
+  } else {
+    const planData = { ...newData, completed: false };
+    if (supabase) {
+      const { data, error } = await supabase.from('plans').insert([planData]).select();
+      if (!error && data) setPlans([data[0], ...plans]);
+    } else {
+      setPlans([{ id: Date.now(), ...planData }, ...plans]);
+    }
+  }
 
-    setFormData({ ...formData, title: '', amount: '' });
+  setFormData({ ...formData, title: '', amount: '' });
     setShowAddModal(false);
   };
 
-  // TÍCH HỢP BƯỚC 3: Xóa dữ liệu từ Supabase
   const handleDeleteTransaction = async (id) => {
-    if (supabase) {
-      await supabase.from('transactions').delete().eq('id', id);
-    }
+    if (supabase) await supabase.from('transactions').delete().eq('id', id);
     setTransactions(transactions.filter(x => x.id !== id));
   };
 
   const handleDeletePlan = async (id) => {
-    if (supabase) {
-      await supabase.from('plans').delete().eq('id', id);
-    }
+    if (supabase) await supabase.from('plans').delete().eq('id', id);
     setPlans(plans.filter(x => x.id !== id));
   };
 
-  // TÍCH HỢP BƯỚC 3: Hoàn thành kế hoạch (Xóa Plan, Thêm Transaction)
   const completePlan = async (plan) => {
     const newTransaction = {
       title: plan.title,
@@ -266,52 +289,16 @@ const App = () => {
     };
 
     if (supabase) {
-      // 1. Thêm vào bảng giao dịch
       const { data, error } = await supabase.from('transactions').insert([newTransaction]).select();
       if (!error && data) {
-        // 2. Xóa khỏi bảng kế hoạch
         await supabase.from('plans').delete().eq('id', plan.id);
         setTransactions([data[0], ...transactions]);
         setPlans(plans.filter(p => p.id !== plan.id));
       }
     } else {
-       // Fallback local
-       setTransactions([{ ...newTransaction, id: Date.now() }, ...transactions]);
-       setPlans(plans.filter(p => p.id !== plan.id));
+      setTransactions([{ id: Date.now(), ...newTransaction }, ...transactions]);
+      setPlans(plans.filter(p => p.id !== plan.id));
     }
-  };
-
-  const SmallPieChart = () => {
-    const data = Object.entries(stats.expenseByCategory);
-    if (data.length === 0) return <div className="py-10 text-center text-slate-400 text-sm italic">Chưa có dữ liệu chi tiêu</div>;
-    let cumulative = 0;
-    return (
-      <div className="flex flex-col items-center">
-        <svg viewBox="0 0 200 200" className="w-48 h-48 -rotate-90 mb-6">
-          {data.map(([cat, val]) => {
-            const p = val / stats.expense;
-            const x1 = Math.cos(2 * Math.PI * cumulative);
-            const y1 = Math.sin(2 * Math.PI * cumulative);
-            cumulative += p;
-            const x2 = Math.cos(2 * Math.PI * cumulative);
-            const y2 = Math.sin(2 * Math.PI * cumulative);
-            return <path key={cat} d={`M ${100 + x1*80} ${100 + y1*80} A 80 80 0 ${p > 0.5 ? 1 : 0} 1 ${100 + x2*80} ${100 + y2*80} L 100 100`} fill={categoryColors[cat]} />;
-          })}
-          <circle cx="100" cy="100" r="50" fill="white" />
-        </svg>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full">
-          {data.map(([cat, val]) => (
-            <div key={cat} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 truncate">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categoryColors[cat] }}></div>
-                <span className="text-slate-600 truncate">{cat}</span>
-              </div>
-              <span className="font-bold">{Math.round((val/stats.expense)*100)}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -365,7 +352,7 @@ const App = () => {
           <div className="space-y-6 pb-4">
             <section className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
               <h3 className="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest">Phân bổ chi tiêu</h3>
-              <SmallPieChart />
+              <SmallPieChart stats={stats} />
             </section>
             
             <section className="bg-blue-600 p-6 rounded-[2rem] text-white">
@@ -528,12 +515,10 @@ const App = () => {
                   {yearlyStats.monthlyData.map((d, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                        <div className="w-full flex flex-col justify-end gap-0.5 h-full relative">
-                          {/* Income Bar */}
                           <div 
                             className="w-full bg-emerald-400/30 rounded-t-sm transition-all group-hover:bg-emerald-400" 
                             style={{ height: `${(d.income / yearlyStats.maxVal) * 100}%` }}
                           ></div>
-                          {/* Expense Bar */}
                           <div 
                             className="w-full bg-rose-400 rounded-t-sm transition-all group-hover:bg-rose-500 shadow-sm" 
                             style={{ height: `${(d.expense / yearlyStats.maxVal) * 100}%` }}
