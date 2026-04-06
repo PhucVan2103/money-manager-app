@@ -73,9 +73,15 @@ const SmallPieChart = ({ stats, isDark }) => {
   let cumulative = 0;
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 200 200" className="w-48 h-48 -rotate-90 mb-6 drop-shadow-md">
+      <svg viewBox="0 0 200 200" className="w-48 h-48 -rotate-90 mb-4 drop-shadow-md">
         {data.map(([cat, val]) => {
           const p = val / stats.expense;
+          
+          // Xử lý trường hợp 1 khoản chi chiếm 100%
+          if (p === 1) {
+            return <circle key={cat} cx="100" cy="100" r="80" fill={categoryColors[cat]} stroke={isDark ? '#1e293b' : '#ffffff'} strokeWidth="2" />;
+          }
+
           const x1 = Math.cos(2 * Math.PI * cumulative);
           const y1 = Math.sin(2 * Math.PI * cumulative);
           cumulative += p;
@@ -123,6 +129,19 @@ const App = () => {
   const [showWarningsModal, setShowWarningsModal] = useState(false);
   const [modalMode, setModalMode] = useState('transaction'); 
   const [currentViewDate, setCurrentViewDate] = useState(new Date());
+
+  const handlePrevMonth = () => {
+    const prev = new Date(currentViewDate);
+    prev.setMonth(prev.getMonth() - 1);
+    setCurrentViewDate(prev);
+  };
+
+  const handleNextMonth = () => {
+    const next = new Date(currentViewDate);
+    next.setMonth(next.getMonth() + 1);
+    setCurrentViewDate(next);
+  };
+
   const [editingId, setEditingId] = useState(null);
   const [aiAdvice, setAiAdvice] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -451,6 +470,19 @@ const App = () => {
     }
   };
 
+  // --- LOGIC HIGHLIGHT KHUNG THU CHI ---
+  const todayString = new Date().toISOString().split('T')[0];
+  const todayExpense = transactions
+    .filter(t => t.type === 'expense' && t.date === todayString)
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  
+  const isExpenseWarning = 
+    (Number(appSettings.monthlyLimit) > 0 && stats.expense > Number(appSettings.monthlyLimit)) ||
+    (Number(appSettings.dailyLimit) > 0 && todayExpense > Number(appSettings.dailyLimit)) ||
+    (stats.balance < 0);
+    
+  const isIncomeHighlight = stats.income > stats.expense && stats.income > 0;
+
   // --- RENDER SCREEN ĐĂNG NHẬP ---
   if (!isLoggedIn) {
     return (
@@ -519,64 +551,71 @@ const App = () => {
         <div className="hidden sm:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-full z-[100]"></div>
 
         {/* Scrollable Main Content */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar relative font-sans select-none pb-24 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar relative font-sans select-none pb-32 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
           
           {/* Header */}
-          <header className={`pt-14 pb-6 px-6 rounded-b-[2.5rem] shadow-sm border-b transition-colors duration-500 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex flex-col gap-0.5">
-                <h1 className="text-3xl font-logo tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 drop-shadow-sm">
-                  FINANCE
-                </h1>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Calendar size={12} className={isDark ? 'text-blue-400' : 'text-blue-500'} />
-                  <p className={`text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Tháng {currentViewDate.getMonth() + 1}, {currentViewDate.getFullYear()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setShowStatsModal(true)}
-                  className={`p-2.5 rounded-full transition-colors ${isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
-                >
-                  <BarChart3 size={20}/>
-                </button>
-                <div className={`flex items-center gap-1 p-1 rounded-full border transition-colors ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                   <button onClick={() => setCurrentViewDate(new Date(currentViewDate.setMonth(currentViewDate.getMonth()-1)))} className={`p-2 rounded-full transition-all ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-white text-slate-600'}`}><ChevronLeft size={16}/></button>
-                   <button onClick={() => setCurrentViewDate(new Date(currentViewDate.setMonth(currentViewDate.getMonth()+1)))} className={`p-2 rounded-full transition-all ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-white text-slate-600'}`}><ChevronRight size={16}/></button>
-                </div>
-              </div>
+          <header className={`pt-14 pb-5 px-5 rounded-b-[2rem] shadow-sm border-b transition-colors duration-500 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <h1 className="text-3xl font-logo tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 drop-shadow-sm">
+                FINANCE
+              </h1>
+              <button 
+                onClick={() => setShowStatsModal(true)}
+                className={`p-2.5 rounded-full transition-colors ${isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+              >
+                <BarChart3 size={20}/>
+              </button>
             </div>
 
             {/* Main Card */}
-            <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden">
+            <div className="bg-slate-900 rounded-[1.5rem] p-5 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden">
               <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/30 rounded-full blur-3xl"></div>
               
-              {/* Nút Chuông Cảnh Báo */}
-              <button
-                onClick={() => setShowWarningsModal(true)}
-                className="absolute top-6 right-6 p-2.5 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-md border border-white/5 transition-all z-10"
-              >
-                <div className="relative">
-                  <Bell size={20} className="text-white" />
-                  {warnings.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-slate-900 rounded-full animate-pulse"></span>
-                  )}
+              {/* Top Bar in Card: Month Selector & Bell */}
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center bg-white/10 rounded-xl p-1 backdrop-blur-md border border-white/10">
+                  <button onClick={handlePrevMonth} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-slate-300 hover:text-white">
+                    <ChevronLeft size={16}/>
+                  </button>
+                  <div className="flex items-center gap-1.5 px-3 min-w-[120px] justify-center cursor-default">
+                    <Calendar size={12} className="text-blue-400" />
+                    <span className="text-[11px] font-bold tracking-widest uppercase">
+                      Tháng {currentViewDate.getMonth() + 1}, {currentViewDate.getFullYear()}
+                    </span>
+                  </div>
+                  <button onClick={handleNextMonth} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-slate-300 hover:text-white">
+                    <ChevronRight size={16}/>
+                  </button>
                 </div>
-              </button>
 
-              <p className="text-xs font-medium text-slate-300 mb-1">Tổng số dư tháng này</p>
-              <h2 className="text-3xl font-black mb-6">{formatVND(stats.balance)}</h2>
-              <div className="flex gap-4">
-                <div className="flex-1 bg-white/10 rounded-2xl p-3 backdrop-blur-md border border-white/5">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase mb-1">
+                {/* Nút Chuông Cảnh Báo */}
+                <button
+                  onClick={() => setShowWarningsModal(true)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-md border border-white/10 transition-all"
+                >
+                  <div className="relative">
+                    <Bell size={18} className="text-white" />
+                    {warnings.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-slate-900 rounded-full animate-pulse"></span>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              <div className="relative z-10">
+                <p className="text-xs font-medium text-slate-300 mb-1">Tổng số dư</p>
+                <h2 className="text-3xl font-black mb-5">{formatVND(stats.balance)}</h2>
+              </div>
+              
+              <div className="flex gap-3 relative z-10">
+                <div className={`flex-1 rounded-xl p-3 backdrop-blur-md border transition-all duration-500 ${isIncomeHighlight ? 'bg-emerald-500/20 border-emerald-400/50 shadow-[0_0_15px_rgba(52,211,153,0.2)]' : 'bg-white/10 border-white/5'}`}>
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1 ${isIncomeHighlight ? 'text-emerald-300' : 'text-emerald-400'}`}>
                     <TrendingUp size={12}/> Thu nhập
                   </div>
                   <p className="font-bold text-sm">{formatVND(stats.income).replace('₫','')}</p>
                 </div>
-                <div className="flex-1 bg-white/10 rounded-2xl p-3 backdrop-blur-md border border-white/5">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-rose-400 uppercase mb-1">
+                <div className={`flex-1 rounded-xl p-3 backdrop-blur-md border transition-all duration-500 ${isExpenseWarning ? 'bg-rose-500/30 border-rose-400/50 shadow-[0_0_15px_rgba(244,63,94,0.4)]' : 'bg-white/10 border-white/5'}`}>
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1 ${isExpenseWarning ? 'text-rose-300' : 'text-rose-400'}`}>
                     <TrendingDown size={12}/> Chi tiêu
                   </div>
                   <p className="font-bold text-sm">{formatVND(stats.expense).replace('₫','')}</p>
@@ -586,16 +625,16 @@ const App = () => {
           </header>
 
           {/* Content Area */}
-          <main className="px-6 pt-8 animate-in fade-in duration-500">
+          <main className="px-5 pt-5 animate-in fade-in duration-500">
 
             {activeTab === 'dashboard' && (
-              <div className="space-y-6 pb-4">
-                <section className={`p-6 rounded-[2rem] border shadow-sm transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
-                  <h3 className={`text-sm font-black mb-6 uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Phân bổ chi tiêu</h3>
+              <div className="space-y-4 pb-4">
+                <section className={`p-5 rounded-[1.5rem] border shadow-sm transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                  <h3 className={`text-sm font-black mb-4 uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Phân bổ chi tiêu</h3>
                   <SmallPieChart stats={stats} isDark={isDark} />
                 </section>
                 
-                <section className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-[2rem] text-white shadow-lg shadow-indigo-500/20 relative overflow-hidden">
+                <section className="bg-gradient-to-br from-indigo-500 to-purple-600 p-5 rounded-[1.5rem] text-white shadow-lg shadow-indigo-500/20 relative overflow-hidden">
                   <div className="flex items-center justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-3">
                       <Sparkles size={20} className="text-yellow-300"/>
@@ -618,7 +657,7 @@ const App = () => {
             )}
 
             {activeTab === 'history' && (
-              <div className="space-y-4">
+              <div className="space-y-4 pb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Lịch sử giao dịch</h3>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>{filteredTransactions.length} mục</span>
@@ -648,7 +687,7 @@ const App = () => {
             )}
 
             {activeTab === 'planning' && (
-              <div className="space-y-6">
+              <div className="space-y-6 pb-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Kế hoạch tài chính</h3>
                   <button 
@@ -660,7 +699,7 @@ const App = () => {
                 </div>
                 
                 {plans.length === 0 ? (
-                  <div className={`text-center py-20 rounded-[2rem] border border-dashed ${isDark ? 'bg-slate-900 border-slate-700 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
+                  <div className={`text-center py-20 rounded-[1.5rem] border border-dashed ${isDark ? 'bg-slate-900 border-slate-700 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
                     <Calendar size={40} className="mx-auto mb-4 opacity-20"/>
                     <p className="text-sm">Chưa có kế hoạch nào được lập</p>
                   </div>
@@ -711,7 +750,7 @@ const App = () => {
 
             {/* TAB CÀI ĐẶT MỚI */}
             {activeTab === 'settings' && (
-              <div className="space-y-6">
+              <div className="space-y-6 pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Cài Đặt Hệ Thống</h3>
                 </div>
@@ -905,35 +944,36 @@ const App = () => {
         )}
 
         {/* Bottom Tab Bar */}
-        <nav className={`absolute bottom-0 left-0 right-0 backdrop-blur-xl border-t px-4 sm:px-6 pb-8 pt-3 flex justify-between items-center z-40 transition-colors duration-500 ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/80 border-slate-100'}`}>
-          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-blue-500 scale-110' : (isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
-            <LayoutDashboard size={24}/>
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Tổng quan</span>
+        <nav className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[360px] rounded-full px-2 py-2 flex justify-between items-center z-40 shadow-2xl transition-colors duration-500 border-2 ${isDark ? 'bg-slate-900 border-slate-700 shadow-blue-900/20' : 'bg-white border-slate-300 shadow-slate-200/50'}`}>
+          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'dashboard' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+            <LayoutDashboard size={20} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2}/>
+            <span className="text-[9px] font-medium">Tổng quan</span>
           </button>
           
-          <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'history' ? 'text-blue-500 scale-110' : (isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
-            <List size={24}/>
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Lịch sử</span>
+          <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'history' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+            <List size={20} strokeWidth={activeTab === 'history' ? 2.5 : 2}/>
+            <span className="text-[9px] font-medium">Lịch sử</span>
           </button>
 
-          <div className="relative -top-8 shrink-0 mx-2">
-            <button 
-              onClick={() => handleOpenAddModal('transaction')}
-              className={`w-16 h-16 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-4 ${isDark ? 'bg-blue-600 border-slate-950 shadow-blue-500/20' : 'bg-slate-900 border-white shadow-slate-400'}`}
-            >
-              <Plus size={32} />
-            </button>
+          <div className="relative shrink-0 flex justify-center items-center px-1">
+            <div className="w-[52px] h-[52px] rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 p-[2.5px] shadow-lg shadow-indigo-500/30">
+              <button 
+                onClick={() => handleOpenAddModal('transaction')}
+                className={`w-full h-full rounded-full flex items-center justify-center hover:scale-95 active:scale-90 transition-transform ${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}`}
+              >
+                <Plus size={26} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
 
-          <button onClick={() => setActiveTab('planning')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'planning' ? 'text-blue-500 scale-110' : (isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
-            <Calendar size={24}/>
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Lên lịch</span>
+          <button onClick={() => setActiveTab('planning')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'planning' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+            <Calendar size={20} strokeWidth={activeTab === 'planning' ? 2.5 : 2}/>
+            <span className="text-[9px] font-medium">Lên lịch</span>
           </button>
 
-          {/* Thay nút Alert cũ bằng nút Settings */}
-          <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'settings' ? 'text-blue-500 scale-110' : (isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
-            <Settings size={24}/>
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Cài đặt</span>
+          <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'settings' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+            <Settings size={20} strokeWidth={activeTab === 'settings' ? 2.5 : 2}/>
+            <span className="text-[9px] font-medium">Cài đặt</span>
           </button>
         </nav>
 
