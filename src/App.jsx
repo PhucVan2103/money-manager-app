@@ -238,7 +238,7 @@ const App = () => {
   // Các hàm tương tác Database
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.amount || !supabase) return;
+    if (!formData.title || !formData.amount) return;
 
     const newData = {
       title: formData.title,
@@ -246,40 +246,75 @@ const App = () => {
       type: formData.type,
       category: formData.category,
       date: formData.date
-  };
+    };
 
-  if (modalMode === 'transaction') {
-    if (supabase) {
-      const { data, error } = await supabase.from('transactions').insert([newData]).select();
-      if (!error && data) setTransactions([data[0], ...transactions]);
-    } else {
-      setTransactions([{ id: Date.now(), ...newData }, ...transactions]);
-    }
-  } else {
-    const planData = { ...newData, completed: false };
-    if (supabase) {
-      const { data, error } = await supabase.from('plans').insert([planData]).select();
-      if (!error && data) setPlans([data[0], ...plans]);
-    } else {
-      setPlans([{ id: Date.now(), ...planData }, ...plans]);
-    }
-  }
+    const tempId = Date.now(); // Tạo ID tạm thời để hiển thị UI ngay lập tức
 
-  setFormData({ ...formData, title: '', amount: '' });
+    if (modalMode === 'transaction') {
+      // 1. Cập nhật UI ngay lập tức (Optimistic Update)
+      setTransactions(prev => [{ id: tempId, ...newData }, ...prev]);
+      
+      // 2. Gửi request ngầm lên database
+      if (supabase) {
+        supabase.from('transactions').insert([newData]).select().then(({ data, error }) => {
+          if (!error && data) {
+            // Thay thế ID tạm bằng ID thực tế từ database để sau này có thể xóa chính xác
+            setTransactions(prev => prev.map(t => t.id === tempId ? data[0] : t));
+          } else {
+            // Rollback nếu lỗi
+            setTransactions(prev => prev.filter(t => t.id !== tempId));
+          }
+        });
+      }
+    } else {
+      const planData = { ...newData, completed: false };
+      
+      // 1. Cập nhật UI ngay
+      setPlans(prev => [{ id: tempId, ...planData }, ...prev]);
+      
+      // 2. Gửi request ngầm
+      if (supabase) {
+        supabase.from('plans').insert([planData]).select().then(({ data, error }) => {
+          if (!error && data) {
+            setPlans(prev => prev.map(p => p.id === tempId ? data[0] : p));
+          } else {
+            setPlans(prev => prev.filter(p => p.id !== tempId));
+          }
+        });
+      }
+    }
+
+    // Đóng modal ngay lập tức không cần đợi Database
+    setFormData({ ...formData, title: '', amount: '' });
     setShowAddModal(false);
   };
 
-  const handleDeleteTransaction = async (id) => {
-    if (supabase) await supabase.from('transactions').delete().eq('id', id);
-    setTransactions(transactions.filter(x => x.id !== id));
+  const handleDeleteTransaction = (id) => {
+    // 1. Xóa trên UI ngay
+    const backup = [...transactions];
+    setTransactions(prev => prev.filter(x => x.id !== id));
+    
+    // 2. Xóa ngầm trên DB
+    if (supabase) {
+      supabase.from('transactions').delete().eq('id', id).then(({ error }) => {
+        if (error) setTransactions(backup); // Phục hồi nếu lỗi
+      });
+    }
   };
 
-  const handleDeletePlan = async (id) => {
-    if (supabase) await supabase.from('plans').delete().eq('id', id);
-    setPlans(plans.filter(x => x.id !== id));
+  const handleDeletePlan = (id) => {
+    const backup = [...plans];
+    setPlans(prev => prev.filter(x => x.id !== id));
+    
+    if (supabase) {
+      supabase.from('plans').delete().eq('id', id).then(({ error }) => {
+        if (error) setPlans(backup);
+      });
+    }
   };
 
-  const completePlan = async (plan) => {
+  const completePlan = (plan) => {
+    const tempId = Date.now();
     const newTransaction = {
       title: plan.title,
       amount: plan.amount,
@@ -288,16 +323,24 @@ const App = () => {
       date: new Date().toISOString().split('T')[0]
     };
 
+    const backupPlans = [...plans];
+    
+    // 1. Cập nhật UI ngay lập tức: Xóa kế hoạch, Thêm giao dịch
+    setPlans(prev => prev.filter(p => p.id !== plan.id));
+    setTransactions(prev => [{ id: tempId, ...newTransaction }, ...prev]);
+
+    // 2. Đồng bộ ngầm
     if (supabase) {
-      const { data, error } = await supabase.from('transactions').insert([newTransaction]).select();
-      if (!error && data) {
-        await supabase.from('plans').delete().eq('id', plan.id);
-        setTransactions([data[0], ...transactions]);
-        setPlans(plans.filter(p => p.id !== plan.id));
-      }
-    } else {
-      setTransactions([{ id: Date.now(), ...newTransaction }, ...transactions]);
-      setPlans(plans.filter(p => p.id !== plan.id));
+      supabase.from('transactions').insert([newTransaction]).select().then(({ data, error }) => {
+        if (!error && data) {
+          setTransactions(prev => prev.map(t => t.id === tempId ? data[0] : t));
+          supabase.from('plans').delete().eq('id', plan.id).then();
+        } else {
+          // Rollback nếu lỗi
+          setTransactions(prev => prev.filter(t => t.id !== tempId));
+          setPlans(backupPlans);
+        }
+      });
     }
   };
 
