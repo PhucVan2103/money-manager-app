@@ -63,8 +63,8 @@ const categoryColors = {
 
 const formatVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
-// 3. Component Biểu đồ
-const SmallPieChart = ({ stats, isDark }) => {
+// 3. Component Biểu đồ (Áp dụng React.memo để ngăn re-render không cần thiết)
+const SmallPieChart = React.memo(({ stats, isDark }) => {
   const data = Object.entries(stats.expenseByCategory);
   if (data.length === 0) return <div className="py-10 text-center text-slate-400 text-sm italic">Chưa có dữ liệu chi tiêu</div>;
   
@@ -102,7 +102,119 @@ const SmallPieChart = ({ stats, isDark }) => {
       </div>
     </div>
   );
-};
+});
+
+// --- COMPONENT MODAL NHẬP LIỆU (TÁCH BIỆT ĐỂ TỐI ƯU HIỆU SUẤT GÕ PHÍM) ---
+const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData, isDark }) => {
+  const [localForm, setLocalForm] = useState({
+    title: '',
+    amount: '',
+    type: 'expense',
+    category: 'Ăn uống',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setLocalForm(initialData);
+    } else {
+      setLocalForm({
+        title: '',
+        amount: '',
+        type: mode === 'plan' ? 'expense' : 'expense',
+        category: 'Ăn uống',
+        date: new Date().toISOString().split('T')[0]
+      });
+    }
+  }, [initialData, mode, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!localForm.title || !localForm.amount) return;
+    onSave({ ...localForm, amount: Number(localForm.amount) });
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-end animate-in fade-in duration-200">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className={`relative w-full max-h-[90%] overflow-y-auto hide-scrollbar rounded-t-[3rem] p-8 pb-12 animate-in slide-in-from-bottom-full duration-500 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}>
+        <div className={`w-12 h-1.5 rounded-full mx-auto mb-8 shrink-0 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl sm:text-2xl font-black italic tracking-tighter uppercase">
+            {initialData ? 'CẬP NHẬT' : (mode === 'transaction' ? 'GHI CHÉP MỚI' : 'LÊN LỊCH MỚI')}
+          </h2>
+          <button type="button" onClick={onClose} className={`p-2 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}><X size={20}/></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className={`grid grid-cols-2 gap-3 p-1.5 rounded-2xl ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
+            <button
+              type="button"
+              onClick={() => setLocalForm({...localForm, type: 'expense', category: 'Ăn uống'})}
+              className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${localForm.type === 'expense' ? (isDark ? 'bg-slate-800 text-rose-400 shadow-sm' : 'bg-white text-rose-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
+            >
+              Chi tiêu
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocalForm({...localForm, type: 'income', category: 'Lương'})}
+              className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${localForm.type === 'income' ? (isDark ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'bg-white text-emerald-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
+            >
+              Thu nhập
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <input
+              type="text"
+              required
+              placeholder={mode === 'transaction' ? "Nội dung giao dịch..." : "Nội dung kế hoạch..."}
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
+              value={localForm.title}
+              onChange={(e) => setLocalForm({...localForm, title: e.target.value})}
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              required
+              placeholder="0 VND"
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
+              value={localForm.amount ? Number(localForm.amount).toLocaleString('vi-VN') : ''}
+              onChange={(e) => {
+                const rawValue = e.target.value.replace(/\D/g, '');
+                setLocalForm({...localForm, amount: rawValue});
+              }}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <select
+                className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-700'}`}
+                value={localForm.category}
+                onChange={(e) => setLocalForm({...localForm, category: e.target.value})}
+              >
+                {categories[localForm.type].map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+              <input
+                type="date"
+                className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
+                value={localForm.date}
+                onChange={(e) => setLocalForm({...localForm, date: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest active:scale-95 ${isDark ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
+          >
+            Lưu Lại
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+});
 
 // --- COMPONENT CHÍNH ---
 const App = () => {
@@ -141,6 +253,7 @@ const App = () => {
   };
 
   const [editingId, setEditingId] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
   const isDark = appSettings.theme === 'dark';
 
@@ -236,20 +349,14 @@ const App = () => {
   const handleOpenAddModal = (mode) => {
     setModalMode(mode);
     setEditingId(null);
-    setFormData(defaultFormData);
+    setEditingItem(null);
     setShowAddModal(true);
   };
 
   const openEditModal = (item, type) => {
     setModalMode(type);
     setEditingId(item.id);
-    setFormData({
-      title: item.title,
-      amount: item.amount,
-      type: item.type,
-      category: item.category,
-      date: item.date
-    });
+    setEditingItem(item);
     setShowAddModal(true);
   };
 
@@ -324,34 +431,29 @@ const App = () => {
     return alerts;
   }, [stats, plans, appSettings, transactions]);
 
-  // Các hàm CRUD
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.title || !formData.amount) return;
+  // Các hàm CRUD (Sử dụng Optimistic UI để tải nhanh)
+  const handleSaveData = async (newData) => {
+    // Đóng Modal ngay lập tức để không bị delay giao diện
+    setShowAddModal(false);
+    const targetId = editingId;
+    setEditingId(null);
+    setEditingItem(null);
 
-    const newData = {
-      title: formData.title,
-      amount: Number(formData.amount),
-      type: formData.type,
-      category: formData.category,
-      date: formData.date
-    };
-
-    if (editingId) {
+    if (targetId) {
       if (modalMode === 'transaction') {
-        const original = transactions.find(t => t.id === editingId);
-        setTransactions(prev => prev.map(t => t.id === editingId ? { ...t, ...newData } : t));
+        const original = transactions.find(t => t.id === targetId);
+        setTransactions(prev => prev.map(t => t.id === targetId ? { ...t, ...newData } : t));
         if (supabase) {
-          supabase.from('transactions').update(newData).eq('id', editingId).then(({ error }) => {
-            if (error) setTransactions(prev => prev.map(t => t.id === editingId ? original : t));
+          supabase.from('transactions').update(newData).eq('id', targetId).then(({ error }) => {
+            if (error) setTransactions(prev => prev.map(t => t.id === targetId ? original : t));
           });
         }
       } else {
-        const original = plans.find(p => p.id === editingId);
-        setPlans(prev => prev.map(p => p.id === editingId ? { ...p, ...newData } : p));
+        const original = plans.find(p => p.id === targetId);
+        setPlans(prev => prev.map(p => p.id === targetId ? { ...p, ...newData } : p));
         if (supabase) {
-          supabase.from('plans').update(newData).eq('id', editingId).then(({ error }) => {
-            if (error) setPlans(prev => prev.map(p => p.id === editingId ? original : p));
+          supabase.from('plans').update(newData).eq('id', targetId).then(({ error }) => {
+            if (error) setPlans(prev => prev.map(p => p.id === targetId ? original : p));
           });
         }
       }
@@ -376,9 +478,6 @@ const App = () => {
         }
       }
     }
-    setFormData(defaultFormData);
-    setEditingId(null);
-    setShowAddModal(false);
   };
 
   const handleDeleteTransaction = (id) => {
@@ -913,89 +1012,15 @@ const App = () => {
           </button>
         </nav>
 
-        {/* Add/Edit Transaction/Plan Modal */}
-        {showAddModal && (
-          <div className="absolute inset-0 z-50 flex items-end animate-in fade-in duration-300">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { setShowAddModal(false); setEditingId(null); setFormData(defaultFormData); }}></div>
-            <div className={`relative w-full max-h-[90%] overflow-y-auto hide-scrollbar rounded-t-[3rem] p-8 pb-12 animate-in slide-in-from-bottom-full duration-500 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}>
-              <div className={`w-12 h-1.5 rounded-full mx-auto mb-8 shrink-0 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl sm:text-2xl font-black italic tracking-tighter uppercase">
-                  {editingId 
-                    ? (modalMode === 'transaction' ? 'SỬA GHI CHÉP' : 'SỬA KẾ HOẠCH') 
-                    : (modalMode === 'transaction' ? 'GHI CHÉP MỚI' : 'LÊN LỊCH MỚI')}
-                </h2>
-                <button onClick={() => { setShowAddModal(false); setEditingId(null); setFormData(defaultFormData); }} className={`p-2 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}><X size={20}/></button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className={`grid grid-cols-2 gap-3 p-1.5 rounded-2xl ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({...formData, type: 'expense', category: 'Ăn uống'})}
-                    className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${formData.type === 'expense' ? (isDark ? 'bg-slate-800 text-rose-400 shadow-sm' : 'bg-white text-rose-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
-                  >
-                    Chi tiêu
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({...formData, type: 'income', category: 'Lương'})}
-                    className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${formData.type === 'income' ? (isDark ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'bg-white text-emerald-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
-                  >
-                    Thu nhập
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    required
-                    placeholder={modalMode === 'transaction' ? "Nội dung giao dịch..." : "Nội dung kế hoạch..."}
-                    className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    required
-                    placeholder="0 VND"
-                    className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
-                    value={formData.amount ? Number(formData.amount).toLocaleString('vi-VN') : ''}
-                    onChange={(e) => {
-                      const rawValue = e.target.value.replace(/\D/g, '');
-                      setFormData({...formData, amount: rawValue});
-                    }}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <select
-                      className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-700'}`}
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    >
-                      {categories[formData.type].map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                    <input
-                      type="date"
-                      className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
-                      value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest ${isDark ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
-                >
-                  {editingId 
-                    ? 'Cập Nhật' 
-                    : (modalMode === 'transaction' ? 'Lưu Giao Dịch' : 'Thêm Vào Lịch')}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+        {/* MODAL NHẬP LIỆU ĐƯỢC TỐI ƯU HIỆU SUẤT (Độc lập state) */}
+        <DataEntryModal 
+          isOpen={showAddModal} 
+          onClose={() => { setShowAddModal(false); setEditingId(null); setEditingItem(null); }} 
+          onSave={handleSaveData} 
+          mode={modalMode} 
+          initialData={editingItem} 
+          isDark={isDark} 
+        />
       </div>
     </div>
   );
