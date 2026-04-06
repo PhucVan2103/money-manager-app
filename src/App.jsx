@@ -18,8 +18,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Pencil,
-  Sparkles,
-  Loader2,
   Settings,
   LogOut,
   Moon,
@@ -143,8 +141,6 @@ const App = () => {
   };
 
   const [editingId, setEditingId] = useState(null);
-  const [aiAdvice, setAiAdvice] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const isDark = appSettings.theme === 'dark';
 
@@ -327,46 +323,6 @@ const App = () => {
     }
     return alerts;
   }, [stats, plans, appSettings, transactions]);
-
-  // Hàm gọi Gemini API
-  const fetchAIAdvice = async () => {
-    setIsAnalyzing(true);
-    const categoryDetails = Object.entries(stats.expenseByCategory)
-      .map(([k, v]) => `${k} (${formatVND(v)})`)
-      .join(', ');
-    
-    const prompt = `Bạn là một chuyên gia tài chính cá nhân nhiệt tình. Dựa vào dữ liệu thu chi tháng này của tôi: Tổng thu: ${formatVND(stats.income)}, Tổng chi: ${formatVND(stats.expense)}. Các khoản chi tiêu gồm: ${categoryDetails || 'Chưa có khoản chi nào'}. Hãy đưa ra nhận xét ngắn gọn (tối đa 4 câu) và 1 lời khuyên hữu ích để tiết kiệm hoặc tối ưu tài chính. Sử dụng emoji cho sinh động.`;
-
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      systemInstruction: { parts: [{ text: "Luôn trả về câu trả lời định dạng text rõ ràng, không dùng markdown in đậm quá mức." }] }
-    };
-
-    const callApi = async (attempt = 0) => {
-      const delays = [1000, 2000, 4000, 8000];
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('Lỗi API');
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        setAiAdvice(text || "Không có phản hồi từ AI.");
-      } catch (error) {
-        if (attempt < delays.length) {
-          await new Promise(r => setTimeout(r, delays[attempt]));
-          await callApi(attempt + 1);
-        } else {
-          setAiAdvice("Đã xảy ra lỗi khi kết nối với AI. Vui lòng thử lại sau.");
-        }
-      }
-    };
-
-    await callApi();
-    setIsAnalyzing(false);
-  };
 
   // Các hàm CRUD
   const handleSubmit = async (e) => {
@@ -632,26 +588,6 @@ const App = () => {
                 <section className={`p-5 rounded-[1.5rem] border shadow-sm transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
                   <h3 className={`text-sm font-black mb-4 uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Phân bổ chi tiêu</h3>
                   <SmallPieChart stats={stats} isDark={isDark} />
-                </section>
-                
-                <section className="bg-gradient-to-br from-indigo-500 to-purple-600 p-5 rounded-[1.5rem] text-white shadow-lg shadow-indigo-500/20 relative overflow-hidden">
-                  <div className="flex items-center justify-between mb-4 relative z-10">
-                    <div className="flex items-center gap-3">
-                      <Sparkles size={20} className="text-yellow-300"/>
-                      <h3 className="font-bold">✨ Cố vấn AI</h3>
-                    </div>
-                    <button 
-                      onClick={fetchAIAdvice} 
-                      disabled={isAnalyzing} 
-                      className="bg-white/20 hover:bg-white/30 p-2 px-3 rounded-xl transition-colors text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                      {isAnalyzing ? 'Đang phân tích...' : 'Phân tích'}
-                    </button>
-                  </div>
-                  <div className="relative z-10 text-sm text-indigo-50 leading-relaxed bg-white/10 p-4 rounded-2xl backdrop-blur-sm border border-white/10 whitespace-pre-line">
-                    {aiAdvice ? aiAdvice : 'Bấm "Phân tích" để AI xem xét và đưa ra lời khuyên dựa trên chi tiêu tháng này của bạn.'}
-                  </div>
                 </section>
               </div>
             )}
