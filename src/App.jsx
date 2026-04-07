@@ -591,20 +591,31 @@ const App = () => {
     setEditingItem(null);
     setPrefillDebt(null);
 
+    // Chuẩn hoá dữ liệu để tránh lỗi Database type
+    const dataToSave = { ...newData };
+    if (!dataToSave.debtId) {
+      dataToSave.debtId = null;
+    }
+    
+    // Bảng plans không có cột debtId, nên phải loại bỏ trường này nếu đang ở chế độ Lên lịch
+    if (modalMode === 'plan') {
+      delete dataToSave.debtId;
+    }
+
     if (targetId) {
       if (modalMode === 'transaction') {
         const original = transactions.find(t => t.id === targetId);
-        setTransactions(prev => prev.map(t => t.id === targetId ? { ...t, ...newData } : t));
+        setTransactions(prev => prev.map(t => t.id === targetId ? { ...t, ...dataToSave } : t));
         if (supabase) {
-          supabase.from('transactions').update(newData).eq('id', targetId).then(({ error }) => {
+          supabase.from('transactions').update(dataToSave).eq('id', targetId).then(({ error }) => {
             if (error) setTransactions(prev => prev.map(t => t.id === targetId ? original : t));
           });
         }
       } else {
         const original = plans.find(p => p.id === targetId);
-        setPlans(prev => prev.map(p => p.id === targetId ? { ...p, ...newData } : p));
+        setPlans(prev => prev.map(p => p.id === targetId ? { ...p, ...dataToSave } : p));
         if (supabase) {
-          supabase.from('plans').update(newData).eq('id', targetId).then(({ error }) => {
+          supabase.from('plans').update(dataToSave).eq('id', targetId).then(({ error }) => {
             if (error) setPlans(prev => prev.map(p => p.id === targetId ? original : p));
           });
         }
@@ -612,15 +623,15 @@ const App = () => {
     } else {
       const tempId = Date.now();
       if (modalMode === 'transaction') {
-        setTransactions(prev => [{ id: tempId, ...newData }, ...prev]);
+        setTransactions(prev => [{ id: tempId, ...dataToSave }, ...prev]);
         if (supabase) {
-          supabase.from('transactions').insert([newData]).select().then(({ data, error }) => {
+          supabase.from('transactions').insert([dataToSave]).select().then(({ data, error }) => {
             if (!error && data) setTransactions(prev => prev.map(t => t.id === tempId ? data[0] : t));
             else setTransactions(prev => prev.filter(t => t.id !== tempId));
           });
         }
       } else {
-        const planData = { ...newData, completed: false };
+        const planData = { ...dataToSave, completed: false };
         setPlans(prev => [{ id: tempId, ...planData }, ...prev]);
         if (supabase) {
           supabase.from('plans').insert([planData]).select().then(({ data, error }) => {
@@ -659,7 +670,8 @@ const App = () => {
       amount: plan.amount,
       type: plan.type,
       category: plan.category,
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      debtId: null
     };
     const backupPlans = [...plans];
     setPlans(prev => prev.filter(p => p.id !== plan.id));
