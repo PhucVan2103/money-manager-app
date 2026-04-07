@@ -24,7 +24,8 @@ import {
   Sun,
   User,
   Lock,
-  Wallet
+  Wallet,
+  BookOpen
 } from 'lucide-react';
 
 const apiKey = "";
@@ -50,7 +51,7 @@ const getSupabaseClient = () => {
 
 // 2. Dữ liệu tĩnh
 const categories = {
-  income: ['Lương', 'Thưởng', 'Kinh doanh', 'Vay tiền', 'Khác'],
+  income: ['Lương', 'Thưởng', 'Kinh doanh', 'Vay tiền', 'Thu nợ', 'Khác'],
   expense: ['Ăn uống', 'Di chuyển', 'Nhà cửa', 'Mua sắm', 'Giải trí', 'Học tập', 'Sức khỏe', 'Trả nợ']
 };
 
@@ -58,12 +59,13 @@ const categoryColors = {
   'Ăn uống': '#f43f5e', 'Di chuyển': '#f59e0b', 'Nhà cửa': '#8b5cf6',
   'Mua sắm': '#ec4899', 'Giải trí': '#06b6d4', 'Học tập': '#10b981',
   'Sức khỏe': '#ef4444', 'Lương': '#10b981', 'Thưởng': '#3b82f6',
-  'Kinh doanh': '#f59e0b', 'Vay tiền': '#14b8a6', 'Trả nợ': '#737373', 'Khác': '#64748b'
+  'Kinh doanh': '#f59e0b', 'Vay tiền': '#14b8a6', 'Thu nợ': '#10b981', 
+  'Trả nợ': '#0f172a', 'Khác': '#64748b'
 };
 
 const formatVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 
-// 3. Component Biểu đồ (Áp dụng React.memo để ngăn re-render không cần thiết)
+// 3. Component Biểu đồ (Áp dụng React.memo)
 const SmallPieChart = React.memo(({ stats, isDark }) => {
   const data = Object.entries(stats.expenseByCategory);
   if (data.length === 0) return <div className="py-10 text-center text-slate-400 text-sm italic">Chưa có dữ liệu chi tiêu</div>;
@@ -74,10 +76,8 @@ const SmallPieChart = React.memo(({ stats, isDark }) => {
       <svg viewBox="0 0 200 200" className="w-48 h-48 -rotate-90 mb-4 drop-shadow-md">
         {data.map(([cat, val]) => {
           const p = val / stats.expense;
-          
-          // Xử lý trường hợp 1 khoản chi chiếm 100%
           if (p === 1) {
-            return <circle key={cat} cx="100" cy="100" r="80" fill={categoryColors[cat]} stroke={isDark ? '#1e293b' : '#ffffff'} strokeWidth="2" />;
+            return <circle key={cat} cx="100" cy="100" r="80" fill={categoryColors[cat] || '#64748b'} stroke={isDark ? '#1e293b' : '#ffffff'} strokeWidth="2" />;
           }
 
           const x1 = Math.cos(2 * Math.PI * cumulative);
@@ -85,7 +85,7 @@ const SmallPieChart = React.memo(({ stats, isDark }) => {
           cumulative += p;
           const x2 = Math.cos(2 * Math.PI * cumulative);
           const y2 = Math.sin(2 * Math.PI * cumulative);
-          return <path key={cat} d={`M ${100 + x1*80} ${100 + y1*80} A 80 80 0 ${p > 0.5 ? 1 : 0} 1 ${100 + x2*80} ${100 + y2*80} L 100 100`} fill={categoryColors[cat]} stroke={isDark ? '#1e293b' : '#ffffff'} strokeWidth="2" />;
+          return <path key={cat} d={`M ${100 + x1*80} ${100 + y1*80} A 80 80 0 ${p > 0.5 ? 1 : 0} 1 ${100 + x2*80} ${100 + y2*80} L 100 100`} fill={categoryColors[cat] || '#64748b'} stroke={isDark ? '#1e293b' : '#ffffff'} strokeWidth="2" />;
         })}
         <circle cx="100" cy="100" r="50" fill={isDark ? '#1e293b' : 'white'} />
       </svg>
@@ -93,7 +93,7 @@ const SmallPieChart = React.memo(({ stats, isDark }) => {
         {data.map(([cat, val]) => (
           <div key={cat} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 truncate">
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categoryColors[cat] }}></div>
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categoryColors[cat] || '#64748b' }}></div>
               <span className={`truncate ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{cat}</span>
             </div>
             <span className="font-bold">{Math.round((val/stats.expense)*100)}%</span>
@@ -104,29 +104,125 @@ const SmallPieChart = React.memo(({ stats, isDark }) => {
   );
 });
 
-// --- COMPONENT MODAL NHẬP LIỆU (TÁCH BIỆT ĐỂ TỐI ƯU HIỆU SUẤT GÕ PHÍM) ---
-const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData, isDark }) => {
+// --- COMPONENT MODAL NHẬP KHOẢN NỢ ---
+const DebtEntryModal = React.memo(({ isOpen, onClose, onSave, isDark }) => {
+  const [form, setForm] = useState({
+    person: '',
+    amount: '',
+    type: 'borrowed', // 'borrowed' (mình nợ) or 'lent' (nợ mình)
+    date: new Date().toISOString().split('T')[0],
+    note: ''
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.person || !form.amount) return;
+    onSave({ ...form, amount: Number(form.amount) });
+    setForm({ person: '', amount: '', type: 'borrowed', date: new Date().toISOString().split('T')[0], note: '' });
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-end animate-in fade-in duration-200">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className={`relative w-full max-h-[90%] overflow-y-auto hide-scrollbar rounded-t-[3rem] p-8 pb-12 animate-in slide-in-from-bottom-full duration-500 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}>
+        <div className={`w-12 h-1.5 rounded-full mx-auto mb-8 shrink-0 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-black italic tracking-tighter uppercase">THÊM KHOẢN NỢ</h2>
+          <button type="button" onClick={onClose} className={`p-2 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}><X size={20}/></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className={`grid grid-cols-2 gap-3 p-1.5 rounded-2xl ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
+            <button
+              type="button"
+              onClick={() => setForm({...form, type: 'borrowed'})}
+              className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${form.type === 'borrowed' ? (isDark ? 'bg-slate-800 text-rose-400 shadow-sm' : 'bg-white text-rose-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
+            >
+              Mình đi vay
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({...form, type: 'lent'})}
+              className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${form.type === 'lent' ? (isDark ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'bg-white text-emerald-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
+            >
+              Cho người vay
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <input
+              type="text"
+              required
+              placeholder="Tên người nợ / chủ nợ..."
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
+              value={form.person}
+              onChange={(e) => setForm({...form, person: e.target.value})}
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              required
+              placeholder="Số tiền"
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
+              value={form.amount ? Number(form.amount).toLocaleString('vi-VN') : ''}
+              onChange={(e) => setForm({...form, amount: e.target.value.replace(/\D/g, '')})}
+            />
+            <input
+              type="date"
+              className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
+              value={form.date}
+              onChange={(e) => setForm({...form, date: e.target.value})}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest active:scale-95 ${isDark ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
+          >
+            Lưu Sổ Nợ
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+});
+
+// --- COMPONENT MODAL NHẬP LIỆU GIAO DỊCH/KẾ HOẠCH ---
+const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData, prefillDebt, processedDebts, isDark }) => {
   const [localForm, setLocalForm] = useState({
     title: '',
     amount: '',
     type: 'expense',
     category: 'Ăn uống',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    debtId: ''
   });
 
   useEffect(() => {
     if (initialData) {
-      setLocalForm(initialData);
+      setLocalForm({ ...initialData, debtId: initialData.debtId || '' });
+    } else if (prefillDebt) {
+      setLocalForm({
+        title: prefillDebt.title,
+        amount: String(prefillDebt.amount),
+        type: prefillDebt.type,
+        category: prefillDebt.category,
+        date: new Date().toISOString().split('T')[0],
+        debtId: prefillDebt.debtId
+      });
     } else {
       setLocalForm({
         title: '',
         amount: '',
         type: mode === 'plan' ? 'expense' : 'expense',
         category: 'Ăn uống',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        debtId: ''
       });
     }
-  }, [initialData, mode, isOpen]);
+  }, [initialData, mode, isOpen, prefillDebt]);
 
   if (!isOpen) return null;
 
@@ -135,6 +231,12 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
     if (!localForm.title || !localForm.amount) return;
     onSave({ ...localForm, amount: Number(localForm.amount) });
   };
+
+  const relevantDebts = localForm.category === 'Trả nợ' 
+    ? processedDebts?.filter(d => d.type === 'borrowed' && d.remainingAmount > 0)
+    : localForm.category === 'Thu nợ' 
+    ? processedDebts?.filter(d => d.type === 'lent' && d.remainingAmount > 0)
+    : [];
 
   return (
     <div className="absolute inset-0 z-50 flex items-end animate-in fade-in duration-200">
@@ -152,14 +254,14 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
           <div className={`grid grid-cols-2 gap-3 p-1.5 rounded-2xl ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
             <button
               type="button"
-              onClick={() => setLocalForm({...localForm, type: 'expense', category: 'Ăn uống'})}
+              onClick={() => setLocalForm({...localForm, type: 'expense', category: 'Ăn uống', debtId: ''})}
               className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${localForm.type === 'expense' ? (isDark ? 'bg-slate-800 text-rose-400 shadow-sm' : 'bg-white text-rose-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
             >
               Chi tiêu
             </button>
             <button
               type="button"
-              onClick={() => setLocalForm({...localForm, type: 'income', category: 'Lương'})}
+              onClick={() => setLocalForm({...localForm, type: 'income', category: 'Lương', debtId: ''})}
               className={`py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${localForm.type === 'income' ? (isDark ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'bg-white text-emerald-600 shadow-sm') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}
             >
               Thu nhập
@@ -191,7 +293,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
               <select
                 className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-700'}`}
                 value={localForm.category}
-                onChange={(e) => setLocalForm({...localForm, category: e.target.value})}
+                onChange={(e) => setLocalForm({...localForm, category: e.target.value, debtId: ''})}
               >
                 {categories[localForm.type].map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
@@ -202,6 +304,20 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
                 onChange={(e) => setLocalForm({...localForm, date: e.target.value})}
               />
             </div>
+
+            {/* Liên kết nợ */}
+            {relevantDebts && relevantDebts.length > 0 && (
+              <select
+                className={`w-full px-4 py-4 rounded-2xl border-2 border-dashed outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 border-slate-700 text-sky-400' : 'bg-slate-50 border-blue-200 text-blue-600'}`}
+                value={localForm.debtId || ''}
+                onChange={(e) => setLocalForm({...localForm, debtId: e.target.value})}
+              >
+                <option value="">-- Liên kết với khoản nợ --</option>
+                {relevantDebts.map(d => (
+                  <option key={d.id} value={d.id}>{d.person} (Còn: {formatVND(d.remainingAmount)})</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <button
@@ -233,10 +349,14 @@ const App = () => {
 
   const [transactions, setTransactions] = useState([]);
   const [plans, setPlans] = useState([]);
+  const [debts, setDebts] = useState([]);
+
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showWarningsModal, setShowWarningsModal] = useState(false);
+  const [showDebtModal, setShowDebtModal] = useState(false);
+
   const [modalMode, setModalMode] = useState('transaction'); 
   const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
@@ -254,17 +374,9 @@ const App = () => {
 
   const [editingId, setEditingId] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
+  const [prefillDebt, setPrefillDebt] = useState(null);
 
   const isDark = appSettings.theme === 'dark';
-
-  const defaultFormData = {
-    title: '',
-    amount: '',
-    type: 'expense',
-    category: 'Ăn uống',
-    date: new Date().toISOString().split('T')[0]
-  };
-  const [formData, setFormData] = useState(defaultFormData);
 
   // --- LOGIC ĐĂNG NHẬP & CÀI ĐẶT ---
   const handleLogin = (e) => {
@@ -311,6 +423,7 @@ const App = () => {
     if (supabase || (!supabaseUrl && !supabaseKey)) {
       fetchTransactions();
       fetchPlans();
+      fetchDebts();
     }
   }, [supabase, isLoggedIn]);
 
@@ -325,6 +438,12 @@ const App = () => {
       localStorage.setItem('money_manager_plans_fallback_v2', JSON.stringify(plans));
     }
   }, [plans, supabase]);
+
+  useEffect(() => {
+    if (!supabase && debts.length > 0) {
+      localStorage.setItem('money_manager_debts_fallback_v2', JSON.stringify(debts));
+    }
+  }, [debts, supabase]);
 
   const fetchTransactions = async () => {
     if (!supabase) {
@@ -346,10 +465,21 @@ const App = () => {
     if (!error && data) setPlans(data);
   };
 
+  const fetchDebts = async () => {
+    if (!supabase) {
+      const saved = localStorage.getItem('money_manager_debts_fallback_v2');
+      if (saved) setDebts(JSON.parse(saved));
+      return;
+    }
+    const { data, error } = await supabase.from('debts').select('*').order('date', { ascending: false });
+    if (!error && data) setDebts(data);
+  };
+
   const handleOpenAddModal = (mode) => {
     setModalMode(mode);
     setEditingId(null);
     setEditingItem(null);
+    setPrefillDebt(null);
     setShowAddModal(true);
   };
 
@@ -357,10 +487,33 @@ const App = () => {
     setModalMode(type);
     setEditingId(item.id);
     setEditingItem(item);
+    setPrefillDebt(null);
     setShowAddModal(true);
   };
 
-  // Các hàm tính toán thống kê
+  // Tính toán Sổ Nợ (Kết hợp Transaction để ra số nợ còn lại)
+  const processedDebts = useMemo(() => {
+    return debts.map(d => {
+      const paid = transactions
+        .filter(t => t.debtId === d.id)
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      return { 
+        ...d, 
+        paidAmount: paid, 
+        remainingAmount: Math.max(0, Number(d.amount) - paid) 
+      };
+    });
+  }, [debts, transactions]);
+
+  const totalBorrowedRemaining = useMemo(() => 
+    processedDebts.filter(d => d.type === 'borrowed').reduce((s, d) => s + d.remainingAmount, 0)
+  , [processedDebts]);
+
+  const totalLentRemaining = useMemo(() => 
+    processedDebts.filter(d => d.type === 'lent').reduce((s, d) => s + d.remainingAmount, 0)
+  , [processedDebts]);
+
+  // Các hàm tính toán thống kê (Tổng quan)
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const tDate = new Date(t.date);
@@ -400,14 +553,12 @@ const App = () => {
     const mLimit = Number(appSettings.monthlyLimit);
     const dLimit = Number(appSettings.dailyLimit);
 
-    // Cảnh báo hạn mức tháng
     if (mLimit > 0 && stats.expense > mLimit) {
       alerts.push(`Tháng này bạn đã tiêu ${formatVND(stats.expense)}, VƯỢT GIỚI HẠN tháng (${formatVND(mLimit)})!`);
     } else if (mLimit > 0 && stats.expense > mLimit * 0.8) {
       alerts.push(`Chú ý: Bạn đã tiêu mức ${(stats.expense/mLimit*100).toFixed(0)}% hạn mức tháng này.`);
     }
 
-    // Cảnh báo hạn mức ngày
     const todayStr = new Date().toISOString().split('T')[0];
     const dailyExpense = transactions
       .filter(t => t.type === 'expense' && t.date === todayStr)
@@ -431,13 +582,13 @@ const App = () => {
     return alerts;
   }, [stats, plans, appSettings, transactions]);
 
-  // Các hàm CRUD (Sử dụng Optimistic UI để tải nhanh)
+  // --- CRUD GIAO DỊCH & KẾ HOẠCH ---
   const handleSaveData = async (newData) => {
-    // Đóng Modal ngay lập tức để không bị delay giao diện
     setShowAddModal(false);
     const targetId = editingId;
     setEditingId(null);
     setEditingItem(null);
+    setPrefillDebt(null);
 
     if (targetId) {
       if (modalMode === 'transaction') {
@@ -525,6 +676,29 @@ const App = () => {
     }
   };
 
+  // --- CRUD SỔ NỢ ---
+  const handleSaveDebt = async (newData) => {
+    setShowDebtModal(false);
+    const tempId = Date.now();
+    setDebts(prev => [{ id: tempId, ...newData }, ...prev]);
+    if (supabase) {
+      supabase.from('debts').insert([newData]).select().then(({ data, error }) => {
+        if (!error && data) setDebts(prev => prev.map(d => d.id === tempId ? data[0] : d));
+        else setDebts(prev => prev.filter(d => d.id !== tempId));
+      });
+    }
+  };
+
+  const handleDeleteDebt = async (id) => {
+    const backup = [...debts];
+    setDebts(prev => prev.filter(x => x.id !== id));
+    if (supabase) {
+      supabase.from('debts').delete().eq('id', id).then(({ error }) => {
+        if (error) setDebts(backup);
+      });
+    }
+  };
+
   // --- LOGIC HIGHLIGHT KHUNG THU CHI ---
   const todayString = new Date().toISOString().split('T')[0];
   const todayExpense = transactions
@@ -541,13 +715,13 @@ const App = () => {
   // --- RENDER SCREEN ĐĂNG NHẬP ---
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4 sm:p-8">
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap'); .font-logo { font-family: 'Montserrat', sans-serif; }`}</style>
-        <div className="w-full sm:w-[390px] h-[100dvh] sm:h-[844px] bg-[#F8F9FE] sm:rounded-[3rem] shadow-2xl relative overflow-hidden sm:border-[8px] border-slate-900 flex flex-col items-center justify-center p-8">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-            <Wallet size={32} className="text-blue-600" />
+      <div className={`min-h-screen flex items-center justify-center sm:p-4 transition-colors duration-500 ${isDark ? 'bg-slate-900' : 'bg-slate-200'}`}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap'); .font-logo { font-family: 'Orbitron', sans-serif; }`}</style>
+        <div className={`w-full sm:w-[390px] h-[100dvh] sm:h-[844px] sm:rounded-[3rem] sm:shadow-2xl relative overflow-hidden flex flex-col items-center justify-center p-8 border-none sm:border-[8px] sm:border-slate-900 transition-colors ${isDark ? 'bg-slate-950' : 'bg-[#F8F9FE]'}`}>
+          <div className="w-20 h-20 bg-sky-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+            <Wallet size={32} className="text-sky-600" />
           </div>
-          <h1 className="text-4xl font-logo tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 drop-shadow-sm mb-2">FINANCE</h1>
+          <h1 className="text-4xl font-logo tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 drop-shadow-[0_0_15px_rgba(56,189,248,0.4)] mb-2">FINANCE</h1>
           <p className="text-slate-500 text-sm mb-10 font-medium">Quản lý chi tiêu cá nhân</p>
           
           <form onSubmit={handleLogin} className="w-full space-y-4">
@@ -591,27 +765,17 @@ const App = () => {
 
   // --- RENDER APP CHÍNH ---
   return (
-    <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4 sm:p-8 transition-colors duration-300">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap');
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .font-logo { font-family: 'Montserrat', sans-serif; }
-      `}</style>
-      
-      {/* Phone Frame Wrapper */}
-      <div className={`w-full sm:w-[390px] h-[100dvh] sm:h-[844px] sm:rounded-[3rem] shadow-2xl relative overflow-hidden sm:border-[8px] border-slate-900 flex flex-col ring-1 ring-slate-900/10 transition-colors duration-500 ${isDark ? 'bg-slate-950' : 'bg-[#F8F9FE]'}`}>
+    <div className={`min-h-screen flex items-center justify-center sm:p-4 transition-colors duration-500 ${isDark ? 'bg-slate-900' : 'bg-slate-200'}`}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap'); .hide-scrollbar::-webkit-scrollbar { display: none; } .font-logo { font-family: 'Orbitron', sans-serif; }`}</style>
+      <div className={`w-full sm:w-[390px] h-[100dvh] sm:h-[844px] sm:rounded-[3rem] sm:shadow-2xl relative overflow-hidden flex flex-col border-none sm:border-[8px] sm:border-slate-900 transition-colors ${isDark ? 'bg-slate-950' : 'bg-[#F8F9FE]'}`}>
         
-        {/* Fake Dynamic Island */}
+        {/* Fake Dynamic Island (Chỉ hiện trên PC/màn hình lớn) */}
         <div className="hidden sm:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-full z-[100]"></div>
-
-        {/* Scrollable Main Content */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar relative font-sans select-none pb-32 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-          
-          {/* Header */}
-          <header className={`pt-14 pb-5 px-5 rounded-b-[2rem] shadow-sm border-b transition-colors duration-500 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+        
+        <div className={`flex-1 overflow-y-auto hide-scrollbar select-none pb-32 transition-colors ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+          <header className={`pt-14 pb-5 px-5 rounded-b-[2rem] transition-colors ${isDark ? 'bg-slate-900 border-b border-slate-800' : 'bg-white border-b border-slate-100'}`}>
             <div className="flex items-center justify-between mb-5">
-              <h1 className="text-3xl font-logo tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 drop-shadow-sm">
+              <h1 className="text-3xl font-logo tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 drop-shadow-[0_0_12px_rgba(56,189,248,0.5)]">
                 FINANCE
               </h1>
               <button 
@@ -688,6 +852,99 @@ const App = () => {
                   <h3 className={`text-sm font-black mb-4 uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Phân bổ chi tiêu</h3>
                   <SmallPieChart stats={stats} isDark={isDark} />
                 </section>
+                
+                {/* SECTION: SỔ NỢ THU GỌN */}
+                <section className={`p-5 rounded-[1.5rem] border-2 shadow-xl transition-all ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50 shadow-slate-200/30'}`}>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Sổ Nợ</h3>
+                    <button onClick={() => setActiveTab('debts')} className="text-[10px] font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-full hover:bg-sky-100 transition-colors">Xem chi tiết</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                      <p className="text-[10px] font-bold text-rose-500 uppercase mb-1">Đang nợ</p>
+                      <p className={`font-black ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>{formatVND(totalBorrowedRemaining).replace('₫','')}</p>
+                    </div>
+                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                      <p className="text-[10px] font-bold text-emerald-500 uppercase mb-1">Cho vay</p>
+                      <p className={`font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{formatVND(totalLentRemaining).replace('₫','')}</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {/* TAB: SỔ NỢ (DEBTS) */}
+            {activeTab === 'debts' && (
+              <div className="space-y-6 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'}`}><ChevronLeft size={16}/></button>
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Quản lý sổ nợ</h3>
+                  </div>
+                  <button onClick={() => setShowDebtModal(true)} className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full ${isDark ? 'bg-sky-500/20 text-sky-400' : 'text-sky-600 bg-sky-50'}`}>
+                    <Plus size={14}/> Thêm nợ
+                  </button>
+                </div>
+
+                {processedDebts.length === 0 ? (
+                  <div className={`text-center py-20 rounded-[1.5rem] border border-dashed ${isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
+                    <BookOpen size={40} className="mx-auto mb-4 opacity-20"/>
+                    <p className="text-sm font-medium">Chưa có khoản nợ nào được ghi chép</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {processedDebts.map(d => (
+                      <div key={d.id} className={`p-5 rounded-2xl border-2 transition-all ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50 shadow-sm'}`}>
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl ${d.type === 'borrowed' ? (isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-50 text-rose-500') : (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-500')}`}>
+                              {d.type === 'borrowed' ? <TrendingDown size={20}/> : <TrendingUp size={20}/>}
+                            </div>
+                            <div>
+                              <p className={`font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{d.person}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{d.type === 'borrowed' ? 'Mình đi vay' : 'Cho người vay'} • {d.date}</p>
+                            </div>
+                          </div>
+                          <p className={`font-black text-sm ${d.type === 'borrowed' ? (isDark ? 'text-rose-400' : 'text-rose-500') : (isDark ? 'text-emerald-400' : 'text-emerald-500')}`}>{formatVND(d.amount)}</p>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <div className={`flex justify-between text-[10px] font-bold mb-1.5 uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <span>Đã trả: {formatVND(d.paidAmount)}</span>
+                            <span>Còn: {formatVND(d.remainingAmount)}</span>
+                          </div>
+                          <div className={`w-full rounded-full h-1.5 overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                            <div 
+                              className={`h-full rounded-full ${d.type === 'borrowed' ? 'bg-rose-400' : 'bg-emerald-400'}`} 
+                              style={{ width: `${Math.min(100, (d.paidAmount / d.amount) * 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className={`flex gap-2 mt-4 pt-4 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                          <button 
+                            onClick={() => {
+                               setModalMode('transaction');
+                               setPrefillDebt({ 
+                                 type: d.type === 'borrowed' ? 'expense' : 'income', 
+                                 category: d.type === 'borrowed' ? 'Trả nợ' : 'Thu nợ', 
+                                 debtId: d.id, 
+                                 amount: d.remainingAmount, 
+                                 title: `Thanh toán nợ ${d.type === 'borrowed' ? 'cho' : 'của'} ${d.person}` 
+                               });
+                               setShowAddModal(true);
+                            }}
+                            disabled={d.remainingAmount <= 0}
+                            className={`flex-1 text-white py-2.5 rounded-xl text-xs font-black transition-colors ${d.remainingAmount <= 0 ? 'bg-emerald-500' : (isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-900 hover:bg-slate-800')}`}
+                          >
+                            {d.remainingAmount <= 0 ? 'Đã hoàn tất 🎉' : (d.type === 'borrowed' ? 'Trả nợ ngay' : 'Thu nợ ngay')}
+                          </button>
+                          <button onClick={() => handleDeleteDebt(d.id)} className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/40' : 'bg-rose-50 text-rose-500 hover:bg-rose-100'}`}><Trash2 size={16}/></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1012,14 +1269,24 @@ const App = () => {
           </button>
         </nav>
 
-        {/* MODAL NHẬP LIỆU ĐƯỢC TỐI ƯU HIỆU SUẤT (Độc lập state) */}
+        {/* MODAL NHẬP LIỆU GIAO DỊCH (OPTIMIZED) */}
         <DataEntryModal 
           isOpen={showAddModal} 
-          onClose={() => { setShowAddModal(false); setEditingId(null); setEditingItem(null); }} 
+          onClose={() => { setShowAddModal(false); setEditingId(null); setEditingItem(null); setPrefillDebt(null); }} 
           onSave={handleSaveData} 
           mode={modalMode} 
           initialData={editingItem} 
+          prefillDebt={prefillDebt}
+          processedDebts={processedDebts}
           isDark={isDark} 
+        />
+
+        {/* MODAL TẠO KHOẢN NỢ MỚI */}
+        <DebtEntryModal
+          isOpen={showDebtModal}
+          onClose={() => setShowDebtModal(false)}
+          onSave={handleSaveDebt}
+          isDark={isDark}
         />
       </div>
     </div>
