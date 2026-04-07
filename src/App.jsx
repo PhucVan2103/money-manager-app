@@ -30,7 +30,7 @@ import {
 
 const apiKey = "";
 
-// 1. Khởi tạo Supabase an toàn (Xử lý fallback cho môi trường preview)
+// 1. Khởi tạo Supabase an toàn
 const getEnv = (key) => {
   try {
     return import.meta.env[key] || '';
@@ -156,7 +156,7 @@ const DebtEntryModal = React.memo(({ isOpen, onClose, onSave, isDark }) => {
               type="text"
               required
               placeholder="Tên người nợ / chủ nợ..."
-              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
               value={form.person}
               onChange={(e) => setForm({...form, person: e.target.value})}
             />
@@ -165,13 +165,13 @@ const DebtEntryModal = React.memo(({ isOpen, onClose, onSave, isDark }) => {
               inputMode="numeric"
               required
               placeholder="Số tiền"
-              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
               value={form.amount ? Number(form.amount).toLocaleString('vi-VN') : ''}
               onChange={(e) => setForm({...form, amount: e.target.value.replace(/\D/g, '')})}
             />
             <input
               type="date"
-              className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
+              className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
               value={form.date}
               onChange={(e) => setForm({...form, date: e.target.value})}
             />
@@ -179,7 +179,7 @@ const DebtEntryModal = React.memo(({ isOpen, onClose, onSave, isDark }) => {
 
           <button
             type="submit"
-            className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest active:scale-95 ${isDark ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
+            className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest active:scale-95 ${isDark ? 'bg-sky-600 hover:bg-sky-700 shadow-sky-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
           >
             Lưu Sổ Nợ
           </button>
@@ -190,7 +190,7 @@ const DebtEntryModal = React.memo(({ isOpen, onClose, onSave, isDark }) => {
 });
 
 // --- COMPONENT MODAL NHẬP LIỆU GIAO DỊCH/KẾ HOẠCH ---
-const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData, prefillDebt, processedDebts, isDark }) => {
+const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData, prefillDebt, prefillDate, processedDebts, isDark }) => {
   const [localForm, setLocalForm] = useState({
     title: '',
     amount: '',
@@ -218,11 +218,11 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
         amount: '',
         type: mode === 'plan' ? 'expense' : 'expense',
         category: 'Ăn uống',
-        date: new Date().toISOString().split('T')[0],
+        date: prefillDate || new Date().toISOString().split('T')[0],
         debtId: ''
       });
     }
-  }, [initialData, mode, isOpen, prefillDebt]);
+  }, [initialData, mode, isOpen, prefillDebt, prefillDate]);
 
   if (!isOpen) return null;
 
@@ -273,7 +273,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
               type="text"
               required
               placeholder={mode === 'transaction' ? "Nội dung giao dịch..." : "Nội dung kế hoạch..."}
-              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold transition-colors ${isDark ? 'bg-slate-950 text-slate-200 placeholder:text-slate-600' : 'bg-slate-50 text-slate-700'}`}
               value={localForm.title}
               onChange={(e) => setLocalForm({...localForm, title: e.target.value})}
             />
@@ -282,7 +282,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
               inputMode="numeric"
               required
               placeholder="0 VND"
-              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
+              className={`w-full px-6 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-black text-2xl transition-colors ${isDark ? 'bg-slate-950 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 text-slate-900'}`}
               value={localForm.amount ? Number(localForm.amount).toLocaleString('vi-VN') : ''}
               onChange={(e) => {
                 const rawValue = e.target.value.replace(/\D/g, '');
@@ -291,7 +291,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
             />
             <div className="grid grid-cols-2 gap-4">
               <select
-                className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-700'}`}
+                className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-700'}`}
                 value={localForm.category}
                 onChange={(e) => setLocalForm({...localForm, category: e.target.value, debtId: ''})}
               >
@@ -299,7 +299,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
               </select>
               <input
                 type="date"
-                className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
+                className={`w-full px-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-300 [color-scheme:dark]' : 'bg-slate-50 text-slate-700'}`}
                 value={localForm.date}
                 onChange={(e) => setLocalForm({...localForm, date: e.target.value})}
               />
@@ -308,7 +308,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
             {/* Liên kết nợ */}
             {relevantDebts && relevantDebts.length > 0 && (
               <select
-                className={`w-full px-4 py-4 rounded-2xl border-2 border-dashed outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 border-slate-700 text-sky-400' : 'bg-slate-50 border-blue-200 text-blue-600'}`}
+                className={`w-full px-4 py-4 rounded-2xl border-2 border-dashed outline-none font-bold text-sm appearance-none transition-colors ${isDark ? 'bg-slate-950 border-slate-700 text-sky-400' : 'bg-slate-50 border-sky-200 text-sky-600'}`}
                 value={localForm.debtId || ''}
                 onChange={(e) => setLocalForm({...localForm, debtId: e.target.value})}
               >
@@ -322,7 +322,7 @@ const DataEntryModal = React.memo(({ isOpen, onClose, onSave, mode, initialData,
 
           <button
             type="submit"
-            className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest active:scale-95 ${isDark ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
+            className={`w-full text-white py-5 rounded-2xl font-black text-lg transition-all shadow-xl uppercase tracking-widest active:scale-95 ${isDark ? 'bg-sky-600 hover:bg-sky-700 shadow-sky-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
           >
             Lưu Lại
           </button>
@@ -375,6 +375,7 @@ const App = () => {
   const [editingId, setEditingId] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [prefillDebt, setPrefillDebt] = useState(null);
+  const [selectedPlanDate, setSelectedPlanDate] = useState(null); // Trạng thái cho tab Lịch
 
   const isDark = appSettings.theme === 'dark';
 
@@ -401,7 +402,7 @@ const App = () => {
     localStorage.setItem('money_manager_settings', JSON.stringify(appSettings));
   }, [appSettings]);
 
-  // Load Supabase (chỉ khi đã đăng nhập)
+  // Load Supabase
   useEffect(() => {
     if (!isLoggedIn) return;
     const loadSupabaseScript = async () => {
@@ -491,7 +492,7 @@ const App = () => {
     setShowAddModal(true);
   };
 
-  // Tính toán Sổ Nợ (Kết hợp Transaction để ra số nợ còn lại)
+  // Tính toán Sổ Nợ
   const processedDebts = useMemo(() => {
     return debts.map(d => {
       const paid = transactions
@@ -735,7 +736,7 @@ const App = () => {
                 <input
                   type="text"
                   placeholder="Tên đăng nhập"
-                  className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 outline-none font-medium placeholder:font-normal text-slate-700 transition-all"
+                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-medium placeholder:font-normal transition-all ${isDark ? 'bg-slate-900 text-slate-200 placeholder:text-slate-600' : 'bg-white text-slate-700'}`}
                   value={loginForm.username}
                   onChange={e => setLoginForm({...loginForm, username: e.target.value})}
                 />
@@ -747,14 +748,14 @@ const App = () => {
                 <input
                   type="password"
                   placeholder="Mật khẩu"
-                  className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 outline-none font-medium placeholder:font-normal text-slate-700 transition-all"
+                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-medium placeholder:font-normal transition-all ${isDark ? 'bg-slate-900 text-slate-200 placeholder:text-slate-600' : 'bg-white text-slate-700'}`}
                   value={loginForm.password}
                   onChange={e => setLoginForm({...loginForm, password: e.target.value})}
                 />
               </div>
             </div>
             
-            <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 uppercase tracking-widest mt-4">
+            <button type="submit" className={`w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all ${isDark ? 'bg-sky-600 hover:bg-sky-700 shadow-sky-900/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-300'}`}>
               Đăng Nhập
             </button>
           </form>
@@ -769,7 +770,7 @@ const App = () => {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap'); .hide-scrollbar::-webkit-scrollbar { display: none; } .font-logo { font-family: 'Orbitron', sans-serif; }`}</style>
       <div className={`w-full sm:w-[390px] h-[100dvh] sm:h-[844px] sm:rounded-[3rem] sm:shadow-2xl relative overflow-hidden flex flex-col border-none sm:border-[8px] sm:border-slate-900 transition-colors ${isDark ? 'bg-slate-950' : 'bg-[#F8F9FE]'}`}>
         
-        {/* Fake Dynamic Island (Chỉ hiện trên PC/màn hình lớn) */}
+        {/* Fake Dynamic Island */}
         <div className="hidden sm:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-full z-[100]"></div>
         
         <div className={`flex-1 overflow-y-auto hide-scrollbar select-none pb-32 transition-colors ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
@@ -780,63 +781,45 @@ const App = () => {
               </h1>
               <button 
                 onClick={() => setShowStatsModal(true)}
-                className={`p-2.5 rounded-full transition-colors ${isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                className={`p-2.5 rounded-full transition-colors ${isDark ? 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'}`}
               >
                 <BarChart3 size={20}/>
               </button>
             </div>
 
             {/* Main Card */}
-            <div className="bg-slate-900 rounded-[1.5rem] p-5 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden">
-              <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/30 rounded-full blur-3xl"></div>
+            <div className={`rounded-[1.5rem] p-5 shadow-2xl relative overflow-hidden transition-all duration-500 border-2 ${isDark ? 'bg-slate-900 text-white border-slate-700 shadow-sky-900/20' : 'bg-white text-slate-900 border-slate-200 shadow-slate-200/50'}`}>
+              <div className={`absolute top-[-20%] right-[-10%] w-40 h-40 rounded-full blur-3xl transition-opacity ${isDark ? 'bg-sky-500/20' : 'bg-sky-500/10'}`}></div>
               
-              {/* Top Bar in Card: Month Selector & Bell */}
               <div className="flex items-center justify-between mb-5 relative z-10">
-                <div className="flex items-center bg-white/10 rounded-xl p-1 backdrop-blur-md border border-white/10">
-                  <button onClick={handlePrevMonth} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-slate-300 hover:text-white">
-                    <ChevronLeft size={16}/>
-                  </button>
+                <div className={`flex items-center rounded-xl p-1 border-2 transition-colors ${isDark ? 'bg-white/10 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                  <button onClick={handlePrevMonth} className="p-1.5 rounded-lg hover:bg-sky-500/20 transition-colors text-slate-400 hover:text-sky-500"><ChevronLeft size={16}/></button>
                   <div className="flex items-center gap-1.5 px-3 min-w-[120px] justify-center cursor-default">
-                    <Calendar size={12} className="text-blue-400" />
-                    <span className="text-[11px] font-bold tracking-widest uppercase">
-                      Tháng {currentViewDate.getMonth() + 1}, {currentViewDate.getFullYear()}
-                    </span>
+                    <Calendar size={12} className={isDark ? 'text-sky-400' : 'text-sky-500'} />
+                    <span className={`text-[11px] font-bold tracking-widest uppercase ${isDark ? 'text-white' : 'text-slate-700'}`}>Tháng {currentViewDate.getMonth() + 1}, {currentViewDate.getFullYear()}</span>
                   </div>
-                  <button onClick={handleNextMonth} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-slate-300 hover:text-white">
-                    <ChevronRight size={16}/>
-                  </button>
+                  <button onClick={handleNextMonth} className="p-1.5 rounded-lg hover:bg-sky-500/20 transition-colors text-slate-400 hover:text-sky-500"><ChevronRight size={16}/></button>
                 </div>
-
-                {/* Nút Chuông Cảnh Báo */}
-                <button
-                  onClick={() => setShowWarningsModal(true)}
-                  className="p-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-md border border-white/10 transition-all"
-                >
+                <button onClick={() => setShowWarningsModal(true)} className={`p-2 rounded-xl border-2 transition-all ${isDark ? 'bg-white/10 border-white/10 text-sky-400' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
                   <div className="relative">
-                    <Bell size={18} className="text-white" />
-                    {warnings.length > 0 && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-slate-900 rounded-full animate-pulse"></span>
-                    )}
+                    <Bell size={18} />
+                    {warnings.length > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full animate-pulse"></span>}
                   </div>
                 </button>
               </div>
 
               <div className="relative z-10">
-                <p className="text-xs font-medium text-slate-300 mb-1">Tổng số dư</p>
-                <h2 className="text-3xl font-black mb-5">{formatVND(stats.balance)}</h2>
+                <p className={`text-xs font-medium mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Tổng số dư</p>
+                <h2 className={`text-3xl font-black mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatVND(stats.balance)}</h2>
               </div>
               
               <div className="flex gap-3 relative z-10">
-                <div className={`flex-1 rounded-xl p-3 backdrop-blur-md border transition-all duration-500 ${isIncomeHighlight ? 'bg-emerald-500/20 border-emerald-400/50 shadow-[0_0_15px_rgba(52,211,153,0.2)]' : 'bg-white/10 border-white/5'}`}>
-                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1 ${isIncomeHighlight ? 'text-emerald-300' : 'text-emerald-400'}`}>
-                    <TrendingUp size={12}/> Thu nhập
-                  </div>
+                <div className={`flex-1 rounded-xl p-3 border-2 transition-all duration-500 ${isIncomeHighlight ? (isDark ? 'bg-sky-500/20 border-sky-400/60 shadow-[0_0_20px_rgba(56,189,248,0.3)]' : 'bg-sky-50 border-sky-200 shadow-sky-200/50') : (isDark ? 'bg-white/10 border-white/5' : 'bg-slate-50 border-slate-200')}`}>
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}><TrendingUp size={12}/> Thu nhập</div>
                   <p className="font-bold text-sm">{formatVND(stats.income).replace('₫','')}</p>
                 </div>
-                <div className={`flex-1 rounded-xl p-3 backdrop-blur-md border transition-all duration-500 ${isExpenseWarning ? 'bg-rose-500/30 border-rose-400/50 shadow-[0_0_15px_rgba(244,63,94,0.4)]' : 'bg-white/10 border-white/5'}`}>
-                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1 ${isExpenseWarning ? 'text-rose-300' : 'text-rose-400'}`}>
-                    <TrendingDown size={12}/> Chi tiêu
-                  </div>
+                <div className={`flex-1 rounded-xl p-3 border-2 transition-all duration-500 ${isExpenseWarning ? (isDark ? 'bg-slate-800 border-slate-600 shadow-[0_0_20px_rgba(0,0,0,0.5)]' : 'bg-slate-100 border-slate-400') : (isDark ? 'bg-white/10 border-white/5' : 'bg-slate-50 border-slate-200')}`}>
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-slate-300' : 'text-slate-500'}`}><TrendingDown size={12}/> Chi tiêu</div>
                   <p className="font-bold text-sm">{formatVND(stats.expense).replace('₫','')}</p>
                 </div>
               </div>
@@ -848,7 +831,7 @@ const App = () => {
 
             {activeTab === 'dashboard' && (
               <div className="space-y-4 pb-4">
-                <section className={`p-5 rounded-[1.5rem] border shadow-sm transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                <section className={`p-5 rounded-[1.5rem] border-2 shadow-xl transition-all ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50 shadow-slate-200/30'}`}>
                   <h3 className={`text-sm font-black mb-4 uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Phân bổ chi tiêu</h3>
                   <SmallPieChart stats={stats} isDark={isDark} />
                 </section>
@@ -860,11 +843,11 @@ const App = () => {
                     <button onClick={() => setActiveTab('debts')} className="text-[10px] font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-full hover:bg-sky-100 transition-colors">Xem chi tiết</button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                    <div className={`p-3 rounded-xl border-2 ${isDark ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
                       <p className="text-[10px] font-bold text-rose-500 uppercase mb-1">Đang nợ</p>
                       <p className={`font-black ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>{formatVND(totalBorrowedRemaining).replace('₫','')}</p>
                     </div>
-                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                    <div className={`p-3 rounded-xl border-2 ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
                       <p className="text-[10px] font-bold text-emerald-500 uppercase mb-1">Cho vay</p>
                       <p className={`font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{formatVND(totalLentRemaining).replace('₫','')}</p>
                     </div>
@@ -887,7 +870,7 @@ const App = () => {
                 </div>
 
                 {processedDebts.length === 0 ? (
-                  <div className={`text-center py-20 rounded-[1.5rem] border border-dashed ${isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
+                  <div className={`text-center py-20 rounded-[1.5rem] border-2 border-dashed ${isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
                     <BookOpen size={40} className="mx-auto mb-4 opacity-20"/>
                     <p className="text-sm font-medium">Chưa có khoản nợ nào được ghi chép</p>
                   </div>
@@ -955,7 +938,7 @@ const App = () => {
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>{filteredTransactions.length} mục</span>
                 </div>
                 {filteredTransactions.map(t => (
-                  <div key={t.id} className={`p-4 rounded-2xl flex items-center shadow-sm group active:scale-95 transition-all border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50'}`}>
+                  <div key={t.id} className={`p-4 rounded-2xl flex items-center shadow-sm group active:scale-95 transition-all border-2 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50'}`}>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-4 shrink-0 ${t.type === 'income' ? (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>
                       {t.type === 'income' ? <TrendingUp size={20}/> : <TrendingDown size={20}/>}
                     </div>
@@ -978,69 +961,148 @@ const App = () => {
               </div>
             )}
 
-            {activeTab === 'planning' && (
-              <div className="space-y-6 pb-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Kế hoạch tài chính</h3>
-                  <button 
-                    onClick={() => handleOpenAddModal('plan')}
-                    className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}
-                  >
-                    <Plus size={14}/> Lên lịch
-                  </button>
-                </div>
-                
-                {plans.length === 0 ? (
-                  <div className={`text-center py-20 rounded-[1.5rem] border border-dashed ${isDark ? 'bg-slate-900 border-slate-700 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
-                    <Calendar size={40} className="mx-auto mb-4 opacity-20"/>
-                    <p className="text-sm">Chưa có kế hoạch nào được lập</p>
+            {/* TAB LÊN LỊCH VỚI GIAO DIỆN CALENDAR */}
+            {activeTab === 'planning' && (() => {
+              const year = currentViewDate.getFullYear();
+              const month = currentViewDate.getMonth();
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              const firstDay = new Date(year, month, 1).getDay();
+              const startingBlankDays = firstDay === 0 ? 6 : firstDay - 1; // 0 = Thứ 2, 6 = Chủ Nhật
+
+              const monthlyPlans = plans.filter(p => {
+                const d = new Date(p.date);
+                return d.getMonth() === month && d.getFullYear() === year;
+              });
+
+              const displayedPlans = selectedPlanDate 
+                ? monthlyPlans.filter(p => p.date === selectedPlanDate)
+                : monthlyPlans;
+
+              return (
+                <div className="space-y-6 pb-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Kế hoạch tài chính</h3>
+                    <button 
+                      onClick={() => { 
+                        setModalMode('plan'); 
+                        setShowAddModal(true); 
+                      }}
+                      className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors ${isDark ? 'bg-sky-500/20 text-sky-400' : 'bg-sky-50 text-sky-600'}`}
+                    >
+                      <Plus size={14}/> Lên lịch
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {plans.map(p => (
-                      <div key={p.id} className={`p-5 rounded-2xl shadow-sm relative overflow-hidden group border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-2 min-w-0 pr-2">
-                            <div className={`p-2 rounded-lg shrink-0 ${p.type === 'income' ? (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>
-                              <Clock size={16}/>
-                            </div>
-                            <div className="min-w-0">
-                              <p className={`font-bold text-sm truncate ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{p.title}</p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase truncate">{p.category} • {p.date}</p>
+
+                  {/* Lịch (Calendar View) */}
+                  <div className={`p-5 rounded-[1.5rem] border-2 shadow-sm transition-colors ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50'}`}>
+                    <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                      {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
+                        <div key={d} className={`text-[10px] font-black ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{d}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: startingBlankDays }).map((_, i) => (
+                        <div key={`blank-${i}`} className="h-10"></div>
+                      ))}
+                      {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = i + 1;
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const dayPlans = monthlyPlans.filter(p => p.date === dateStr);
+                        const hasIncome = dayPlans.some(p => p.type === 'income');
+                        const hasExpense = dayPlans.some(p => p.type === 'expense');
+                        const isToday = dateStr === new Date().toISOString().split('T')[0];
+                        const isSelected = selectedPlanDate === dateStr;
+
+                        let baseClass = isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-50 text-slate-700';
+                        if (isSelected) {
+                          baseClass = isDark ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-900 text-white shadow-md';
+                        } else if (isToday) {
+                          baseClass = isDark ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'bg-sky-50 text-sky-600 border border-sky-100';
+                        } else if (hasIncome || hasExpense) {
+                          baseClass = isDark ? 'bg-slate-800 border border-slate-700 text-white shadow-sm' : 'bg-slate-100 border border-slate-200 text-slate-900 shadow-sm';
+                        }
+
+                        return (
+                          <div 
+                            key={day} 
+                            onClick={() => setSelectedPlanDate(isSelected ? null : dateStr)}
+                            className={`h-10 flex flex-col items-center justify-center rounded-xl relative cursor-pointer transition-all ${baseClass}`}
+                          >
+                            <span className="text-sm font-bold">{day}</span>
+                            <div className="flex gap-1 mt-0.5 absolute bottom-1">
+                              {hasIncome && <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : (isDark ? 'bg-emerald-400' : 'bg-emerald-500')}`}></div>}
+                              {hasExpense && <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : (isDark ? 'bg-rose-400' : 'bg-rose-500')}`}></div>}
                             </div>
                           </div>
-                          <p className={`font-black text-sm shrink-0 ${p.type === 'income' ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-rose-400' : 'text-rose-600')}`}>
-                            {formatVND(p.amount).replace('₫','')}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => completePlan(p)}
-                            className="flex-1 flex items-center justify-center gap-2 bg-slate-900 text-white py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform"
-                          >
-                            <CheckCircle2 size={14}/> Xong
-                          </button>
-                          <button 
-                            onClick={() => openEditModal(p, 'plan')}
-                            className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/40' : 'bg-blue-50 text-blue-400 hover:bg-blue-100 hover:text-blue-600'}`}
-                          >
-                            <Pencil size={16}/>
-                          </button>
-                          <button 
-                            onClick={() => handleDeletePlan(p.id)}
-                            className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/40' : 'bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600'}`}
-                          >
-                            <Trash2 size={16}/>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                  
+                  {/* Danh sách Kế hoạch */}
+                  <div className="space-y-3">
+                    {selectedPlanDate && (
+                      <div className="flex justify-between items-center px-1 mb-2 mt-4">
+                        <span className={`text-xs font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Kế hoạch ngày {selectedPlanDate.split('-').reverse().join('/')}
+                        </span>
+                        <button onClick={() => setSelectedPlanDate(null)} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${isDark ? 'text-sky-400 bg-sky-500/20' : 'text-sky-500 bg-sky-50'}`}>
+                          Xem tất cả
+                        </button>
+                      </div>
+                    )}
 
-            {/* TAB CÀI ĐẶT MỚI */}
+                    {displayedPlans.length === 0 ? (
+                      <div className={`text-center py-10 rounded-[1.5rem] border-2 border-dashed ${isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'}`}>
+                        <Calendar size={32} className="mx-auto mb-3 opacity-20"/>
+                        <p className="text-sm">{selectedPlanDate ? 'Không có kế hoạch cho ngày này' : 'Chưa có kế hoạch nào trong tháng'}</p>
+                      </div>
+                    ) : (
+                      displayedPlans.map(p => (
+                        <div key={p.id} className={`p-5 rounded-2xl border-2 transition-all ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-50 shadow-sm'}`}>
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <div className={`p-2 rounded-lg shrink-0 ${p.type === 'income' ? (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600') : (isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-50 text-rose-600')}`}>
+                                <Clock size={16}/>
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`font-bold text-sm truncate ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{p.title}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase truncate">{p.category} • {p.date.split('-').reverse().join('/')}</p>
+                              </div>
+                            </div>
+                            <p className={`font-black text-sm shrink-0 ${p.type === 'income' ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-rose-400' : 'text-rose-600')}`}>
+                              {formatVND(p.amount).replace('₫','')}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => completePlan(p)}
+                              className="flex-1 flex items-center justify-center gap-2 bg-slate-900 text-white py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+                            >
+                              <CheckCircle2 size={14}/> Xong
+                            </button>
+                            <button 
+                              onClick={() => openEditModal(p, 'plan')}
+                              className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/40' : 'bg-blue-50 text-blue-400 hover:bg-blue-100 hover:text-blue-600'}`}
+                            >
+                              <Pencil size={16}/>
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePlan(p.id)}
+                              className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl transition-colors ${isDark ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/40' : 'bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600'}`}
+                            >
+                              <Trash2 size={16}/>
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* TAB CÀI ĐẶT */}
             {activeTab === 'settings' && (
               <div className="space-y-6 pb-4">
                 <div className="flex items-center justify-between mb-4">
@@ -1048,11 +1110,11 @@ const App = () => {
                 </div>
 
                 {/* Giao diện */}
-                <div className={`p-5 rounded-2xl shadow-sm border space-y-4 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                <div className={`p-5 rounded-2xl shadow-sm border-2 space-y-4 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
                   <h4 className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Giao diện</h4>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                      <div className={`p-2 rounded-lg ${isDark ? 'bg-sky-500/20 text-sky-400' : 'bg-sky-50 text-sky-600'}`}>
                         {isDark ? <Moon size={18}/> : <Sun size={18}/>}
                       </div>
                       <span className={`font-bold text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>Chế độ Tối (Dark Mode)</span>
@@ -1060,7 +1122,7 @@ const App = () => {
                     {/* Toggle Switch */}
                     <button 
                       onClick={() => setAppSettings({...appSettings, theme: isDark ? 'light' : 'dark'})}
-                      className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${isDark ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                      className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${isDark ? 'bg-sky-500' : 'bg-slate-300'}`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform duration-300 ${isDark ? 'translate-x-6.5 left-0.5' : 'translate-x-0.5'}`}></div>
                     </button>
@@ -1068,7 +1130,7 @@ const App = () => {
                 </div>
 
                 {/* Giới hạn chi tiêu */}
-                <div className={`p-5 rounded-2xl shadow-sm border space-y-4 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                <div className={`p-5 rounded-2xl shadow-sm border-2 space-y-4 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
                   <h4 className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Giới hạn chi tiêu (VND)</h4>
                   
                   <div className="space-y-3">
@@ -1078,7 +1140,7 @@ const App = () => {
                         type="text"
                         inputMode="numeric"
                         placeholder="VD: 500,000"
-                        className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-700'}`}
+                        className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-700'}`}
                         value={appSettings.dailyLimit ? Number(appSettings.dailyLimit).toLocaleString('vi-VN') : ''}
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, '');
@@ -1092,7 +1154,7 @@ const App = () => {
                         type="text"
                         inputMode="numeric"
                         placeholder="VD: 10,000,000"
-                        className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-700'}`}
+                        className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-sky-500/20 outline-none font-bold text-sm transition-colors ${isDark ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-700'}`}
                         value={appSettings.monthlyLimit ? Number(appSettings.monthlyLimit).toLocaleString('vi-VN') : ''}
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, '');
@@ -1104,7 +1166,7 @@ const App = () => {
                 </div>
 
                 {/* Tài khoản */}
-                <div className={`p-5 rounded-2xl shadow-sm border space-y-4 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                <div className={`p-5 rounded-2xl shadow-sm border-2 space-y-4 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
                   <h4 className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Tài khoản</h4>
                   <button 
                     onClick={handleLogout}
@@ -1237,18 +1299,18 @@ const App = () => {
 
         {/* Bottom Tab Bar */}
         <nav className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[360px] rounded-full px-2 py-2 flex justify-between items-center z-40 shadow-2xl transition-colors duration-500 border-2 ${isDark ? 'bg-slate-900 border-slate-700 shadow-blue-900/20' : 'bg-white border-slate-300 shadow-slate-200/50'}`}>
-          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'dashboard' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'dashboard' ? (isDark ? 'text-white' : 'text-sky-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
             <LayoutDashboard size={20} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2}/>
             <span className="text-[9px] font-medium">Tổng quan</span>
           </button>
           
-          <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'history' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+          <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'history' ? (isDark ? 'text-white' : 'text-sky-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
             <List size={20} strokeWidth={activeTab === 'history' ? 2.5 : 2}/>
             <span className="text-[9px] font-medium">Lịch sử</span>
           </button>
 
           <div className="relative shrink-0 flex justify-center items-center px-1">
-            <div className="w-[52px] h-[52px] rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 p-[2.5px] shadow-lg shadow-indigo-500/30">
+            <div className="w-[52px] h-[52px] rounded-full bg-gradient-to-tr from-sky-400 via-sky-500 to-indigo-600 p-[2.5px] shadow-lg shadow-sky-500/30">
               <button 
                 onClick={() => handleOpenAddModal('transaction')}
                 className={`w-full h-full rounded-full flex items-center justify-center hover:scale-95 active:scale-90 transition-transform ${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}`}
@@ -1258,12 +1320,12 @@ const App = () => {
             </div>
           </div>
 
-          <button onClick={() => setActiveTab('planning')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'planning' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+          <button onClick={() => setActiveTab('planning')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'planning' ? (isDark ? 'text-white' : 'text-sky-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
             <Calendar size={20} strokeWidth={activeTab === 'planning' ? 2.5 : 2}/>
             <span className="text-[9px] font-medium">Lên lịch</span>
           </button>
 
-          <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'settings' ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+          <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 w-14 transition-all ${activeTab === 'settings' ? (isDark ? 'text-white' : 'text-sky-600') : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
             <Settings size={20} strokeWidth={activeTab === 'settings' ? 2.5 : 2}/>
             <span className="text-[9px] font-medium">Cài đặt</span>
           </button>
@@ -1277,6 +1339,7 @@ const App = () => {
           mode={modalMode} 
           initialData={editingItem} 
           prefillDebt={prefillDebt}
+          prefillDate={selectedPlanDate} // Truyền ngày đang chọn trên lịch vào Form
           processedDebts={processedDebts}
           isDark={isDark} 
         />
